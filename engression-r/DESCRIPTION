@@ -1,0 +1,13 @@
+Package: engression
+Title: Engression Modelling
+Version: 0.1
+Author: Xinwei Shen <xinwei.shen@stat.math.ethz.ch>, Nicolai Meinshausen <meinshausen@stat.math.ethz.ch>
+Maintainer: Xinwei Shen <xinwei.shen@stat.math.ethz.ch>, Nicolai Meinshausen <meinshausen@stat.math.ethz.ch>
+Description: Fits engression models for nonlinear distributional regression. Predictors and targets can be univariate or multivariate. Functionality includes estimation of conditional mean, estimation of conditional quantiles, or sampling from the fitted distribution. Training is done full-batch on CPU (the python version offers GPU-accelerated stochastic gradient descent).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Imports: torch
+NeedsCompilation: no
+Packaged: 2023-06-30 11:15:58 UTC; nicolai

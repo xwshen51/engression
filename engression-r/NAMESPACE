@@ -1,0 +1,8 @@
+import(torch)
+importFrom("stats", "predict", "quantile", "rnorm", "sd")
+S3method(predict,engression)
+S3method(predict,engressionBagged)
+S3method(print,engression)
+S3method(print,engressionBagged)
+export(engression)
+export(engressionBagged)
