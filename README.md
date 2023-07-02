@@ -68,6 +68,7 @@ plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")
 ```
 
 ### Python
+Below is one simple demonstration. See [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_simu.ipynb) for more details on simulated data and [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_air.ipynb) for a real data example.
 ```python
 from engression import engression
 from engression.data.simulator import preanm_simulator
@@ -85,7 +86,9 @@ print("L2 loss:", engressor.eval_loss(x_eval, y_eval_mean, loss_type="l2"))
 print("correlation between predicted and true means:", engressor.eval_loss(x_eval, y_eval_mean, loss_type="cor"))
 
 ## Predictions
-y_pred = engressor.predict(x_eval, target="mean")
+y_pred_mean = engressor.predict(x_eval, target="mean") ## for the conditional mean
+y_pred_med = engressor.predict(x_eval, target="median") ## for the conditional median
+y_pred_quant = engressor.predict(x_eval, target=[0.025, 0.5, 0.975]) ## for the conditional 2.5% and 97.5% quantiles
 ```
 
 
