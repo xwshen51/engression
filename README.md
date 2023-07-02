@@ -19,7 +19,7 @@ devtools::install_github("xwshen51/engression", subdir = "engression-r")
 ```
 
 ### Python package
-The latest release of the Python package can be installed through pip:
+The latest release of the Python package can be installed via pip:
 ```sh
 pip install engression
 ```
@@ -27,10 +27,7 @@ pip install engression
 The development version can be installed from github
 
 ```sh
-$ git clone https://github.com/xwshen51/engression.git  # Download the package 
-$ cd engression/engression-python
-$ pip install -r requirements.txt  # Install the requirements
-$ python setup.py install develop --user
+pip install -e "git+https://github.com/xwshen51/engression#egg=engression&subdirectory=engression-python" 
 ```
 
 
@@ -38,7 +35,36 @@ $ python setup.py install develop --user
 ### R
 ```R
 require(engression)
+n = 1000
+p = 5
 
+X = matrix(rnorm(n*p),ncol=p)
+Y = (X[,1]+rnorm(n)*0.1)^2 + (X[,2]+rnorm(n)*0.1) + rnorm(n)*0.1
+Xtest = matrix(rnorm(n*p),ncol=p)
+Ytest = (Xtest[,1]+rnorm(n)*0.1)^2 + (Xtest[,2]+rnorm(n)*0.1) + rnorm(n)*0.1
+
+## fit engression object
+engr = engression(X,Y)
+print(engr)
+
+## prediction on test data
+Yhat = predict(engr,Xtest,type="mean")
+cat("\n correlation between predicted and realized values:  ", signif(cor(Yhat, Ytest),3))
+plot(Yhat, Ytest,xlab="prediction", ylab="observation")
+
+## quantile prediction
+Yhatquant = predict(engr,Xtest,type="quantiles")
+ord = order(Yhat)
+matplot(Yhat[ord], Yhatquant[ord,], type="l", col=2,lty=1,xlab="prediction", ylab="observation")
+points(Yhat[ord],Ytest[ord],pch=20,cex=0.5)
+
+## sampling from estimated model
+Ysample = predict(engr,Xtest,type="sample",nsample=1)
+par(mfrow=c(1,2))
+## plot of realized values against first variable
+plot(Xtest[,1], Ytest, xlab="Variable 1", ylab="Observation")
+## plot of sampled values against first variable
+plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")   
 ```
 
 ### Python
@@ -46,19 +72,19 @@ require(engression)
 from engression import engression
 from engression.data.simulator import preanm_simulator
 
-# Simulate data
+## Simulate data
 x, y = preanm_simulator("square", n=10000, x_lower=0, x_upper=2, noise_std=1, train=True, device=device)
 x_eval, y_eval_med, y_eval_mean = preanm_simulator("square", n=1000, x_lower=0, x_upper=4, noise_std=1, train=False, device=device)
 
-# Build an engression model and train
+## Build an engression model and train
 engressor = engression(x, y, lr=0.01, num_epoches=500, batch_size=1000, device="cuda")
 engressor.summary()
 
-# Evaluation
+## Evaluation
 print("L2 loss:", engressor.eval_loss(x_eval, y_eval_mean, loss_type="l2"))
 print("correlation between predicted and true means:", engressor.eval_loss(x_eval, y_eval_mean, loss_type="cor"))
 
-# Predictions
+## Predictions
 y_pred = engressor.predict(x_eval, target="mean")
 ```
 

@@ -12,10 +12,7 @@ pip install engression
 The development version can be installed from github
 
 ```sh
-$ git clone https://github.com/xwshen51/engression.git  # Download the package 
-$ cd engression/engression-python
-$ pip install -r requirements.txt  # Install the requirements
-$ python setup.py install develop --user
+pip install -e "git+https://github.com/xwshen51/engression#egg=engression&subdirectory=engression-python" 
 ```
 
 
