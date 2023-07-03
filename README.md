@@ -4,6 +4,19 @@ Engression is a nonlinear regression methodology proposed in the paper "[*Engres
 This repository contains the software implementations of engression in both R and Python.
 
 ## Installation
+
+### Python package
+The latest release of the Python package can be installed via pip:
+```sh
+pip install engression
+```
+
+The development version can be installed from github:
+
+```sh
+pip install -e "git+https://github.com/xwshen51/engression#egg=engression&subdirectory=engression-python" 
+```
+
 ### R package
 
 The latest release of the R package can be installed through CRAN (coming soon):
@@ -12,26 +25,40 @@ The latest release of the R package can be installed through CRAN (coming soon):
 install.packages("engression")
 ```
 
-The development version can be installed from github
+The development version can be installed from github:
 
 ```R
 devtools::install_github("xwshen51/engression", subdir = "engression-r")
 ```
 
-### Python package
-The latest release of the Python package can be installed via pip:
-```sh
-pip install engression
-```
-
-The development version can be installed from github
-
-```sh
-pip install -e "git+https://github.com/xwshen51/engression#egg=engression&subdirectory=engression-python" 
-```
-
 
 ## Usage Example
+
+### Python
+Below is one simple demonstration. See [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_simu.ipynb) for more details on simulated data and [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_air.ipynb) for a real data example.
+```python
+from engression import engression
+from engression.data.simulator import preanm_simulator
+
+## Simulate data
+x, y = preanm_simulator("square", n=10000, x_lower=0, x_upper=2, noise_std=1, train=True, device=device)
+x_eval, y_eval_med, y_eval_mean = preanm_simulator("square", n=1000, x_lower=0, x_upper=4, noise_std=1, train=False, device=device)
+
+## Fit an engression model
+engressor = engression(x, y, lr=0.01, num_epoches=500, batch_size=1000, device="cuda")
+## Summarize model information
+engressor.summary()
+
+## Evaluation
+print("L2 loss:", engressor.eval_loss(x_eval, y_eval_mean, loss_type="l2"))
+print("correlation between predicted and true means:", engressor.eval_loss(x_eval, y_eval_mean, loss_type="cor"))
+
+## Predictions
+y_pred_mean = engressor.predict(x_eval, target="mean") ## for the conditional mean
+y_pred_med = engressor.predict(x_eval, target="median") ## for the conditional median
+y_pred_quant = engressor.predict(x_eval, target=[0.025, 0.5, 0.975]) ## for the conditional 2.5% and 97.5% quantiles
+```
+
 ### R
 ```R
 require(engression)
@@ -65,30 +92,6 @@ par(mfrow=c(1,2))
 plot(Xtest[,1], Ytest, xlab="Variable 1", ylab="Observation")
 ## plot of sampled values against first variable
 plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")   
-```
-
-### Python
-Below is one simple demonstration. See [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_simu.ipynb) for more details on simulated data and [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_air.ipynb) for a real data example.
-```python
-from engression import engression
-from engression.data.simulator import preanm_simulator
-
-## Simulate data
-x, y = preanm_simulator("square", n=10000, x_lower=0, x_upper=2, noise_std=1, train=True, device=device)
-x_eval, y_eval_med, y_eval_mean = preanm_simulator("square", n=1000, x_lower=0, x_upper=4, noise_std=1, train=False, device=device)
-
-## Build an engression model and train
-engressor = engression(x, y, lr=0.01, num_epoches=500, batch_size=1000, device="cuda")
-engressor.summary()
-
-## Evaluation
-print("L2 loss:", engressor.eval_loss(x_eval, y_eval_mean, loss_type="l2"))
-print("correlation between predicted and true means:", engressor.eval_loss(x_eval, y_eval_mean, loss_type="cor"))
-
-## Predictions
-y_pred_mean = engressor.predict(x_eval, target="mean") ## for the conditional mean
-y_pred_med = engressor.predict(x_eval, target="median") ## for the conditional median
-y_pred_quant = engressor.predict(x_eval, target=[0.025, 0.5, 0.975]) ## for the conditional 2.5% and 97.5% quantiles
 ```
 
 
