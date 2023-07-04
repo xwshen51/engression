@@ -1,6 +1,6 @@
 # Engression
 
-Engression is a nonlinear regression methodology proposed in the paper "[*Engression: Extrapolation for Nonlinear Regression?*]()" by Xinwei Shen and Nicolai Meinshausen. 
+Engression is a nonlinear regression methodology proposed in the paper "[*Engression: Extrapolation for Nonlinear Regression?*](https://arxiv.org/abs/2307.00835)" by Xinwei Shen and Nicolai Meinshausen. 
 This repository contains the software implementations of engression in both R and Python.
 
 ## Installation
