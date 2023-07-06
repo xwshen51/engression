@@ -21,7 +21,7 @@
 #' @return A bagged engression model object with class "engressionBagged".
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'   n = 1000
 #'   p = 5
 #'   X = matrix(rnorm(n*p),ncol=p)
@@ -52,11 +52,14 @@
 #' 
 #'   ## sampling from estimated model
 #'   Ysample = predict(engb,Xtest,type="sample",nsample=1)
-#'   par(mfrow=c(1,2))
+#' 
 #'   ## plot of realized values against first variable
+#'   oldpar <- par()
+#'   par(mfrow=c(1,2))
 #'   plot(Xtest[,1], Ytest, xlab="Variable 1", ylab="Observation")
 #'   ## plot of sampled values against first variable
-#'   plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")  
+#'   plot(Xtest[,1], Ysample[,1], xlab="Variable 1", ylab="Sample from engression model")  
+#'   par(oldpar)
 #' }
 #'
 #' @export

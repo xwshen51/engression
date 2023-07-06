@@ -19,7 +19,7 @@
 #' @return An engression model object with class "engression".
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'   n = 1000
 #'   p = 5
 #' 
@@ -45,11 +45,14 @@
 #' 
 #'   ## sampling from estimated model
 #'   Ysample = predict(engr,Xtest,type="sample",nsample=1)
-#'   par(mfrow=c(1,2))
+#'    
 #'   ## plot of realized values against first variable
+#'   oldpar <- par()
+#'   par(mfrow=c(1,2))
 #'   plot(Xtest[,1], Ytest, xlab="Variable 1", ylab="Observation")
 #'   ## plot of sampled values against first variable
 #'   plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")   
+#'   par(oldpar)
 #' }
 #' 
 #' @export

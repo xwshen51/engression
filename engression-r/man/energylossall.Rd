@@ -22,13 +22,4 @@ as the mean of the L2 norms between \code{yt} and \code{mxt} and between \code{y
 subtracted by half the mean of the L2 norm between \code{mxt} and \code{mxpt}. Unlike \code{energyloss()}, this function
 also returns the prediction loss s1 = E(|yt-mxt|) and variance loss s2 = E(|mxt-mxpt'|) as part of the output.
 }
-\examples{
-\dontrun{
-  yt = torch_randn(5, 3)
-  mxt = torch_randn(5, 3)
-  mxpt = torch_randn(5, 3)
-  loss = energylossall(yt, mxt, mxpt)
-}
-
-}
 \keyword{internal}

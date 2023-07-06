@@ -17,7 +17,7 @@
 #' @return A matrix or array of predictions.
 #'#'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'   n = 1000
 #'   p = 5
 #'   X = matrix(rnorm(n*p),ncol=p)
@@ -48,11 +48,7 @@
 #' 
 #'   ## sampling from estimated model
 #'   Ysample = predict(engb,Xtest,type="sample",nsample=1)
-#'   par(mfrow=c(1,2))
-#'   ## plot of realized values against first variable
-#'   plot(Xtest[,1], Ytest, xlab="Variable 1", ylab="Observation")     
-#'   ## plot of sampled values against first variable
-#'   plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")   
+#'      
 #' }
 #' 
 #' @export
@@ -81,7 +77,7 @@ predict.engressionBagged <- function(object, Xtest=NULL, type=c("mean","sample",
     }
     Yhat = aperm( apply(Yhat,c(1,2),as.vector  ),c(2,3,1)) 
     if(useoob) Yhat = aperm(apply(Yhat,1:2,function(x) x[which(!is.na(x))]),c(2,3,1))
-    if(type=="sample")  dimnames(Yhat)[[3]] = paste("sample_",1:nsample,sep="") 
+    if(type=="sample")  dimnames(Yhat)[[length(dim(Yhat))]] = paste("sample_",1:dim(Yhat)[length(dim(Yhat))],sep="") 
     if(type=="mean") Yhat = apply(Yhat,1:(length(dim(Yhat))-1), mean, trim=trim)
     if(type %in% c("quantile","quantiles")){
         if(length(quantiles)==1){

@@ -11,13 +11,6 @@
 #' 
 #' @return A vector containing the calculated energy loss, `s1`, and `s2`.
 #' 
-#' @examples
-#' \dontrun{
-#'   yt = torch_randn(5, 3)
-#'   mxt = torch_randn(5, 3)
-#'   mxpt = torch_randn(5, 3)
-#'   loss = energylossall(yt, mxt, mxpt)
-#' }
 #' 
 #' @keywords internal
 energylossall <- function(yt,mxt,mxpt){

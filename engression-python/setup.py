@@ -11,9 +11,9 @@ with open('requirements.txt') as f:
 setup(
     name='engression',
     version='0.0.1',
-    description='Engression',
+    description='Engression Modelling',
     url='https://github.com/xwshen51/engression',
-    author='Xinwei Shen',
+    author='Xinwei Shen and Nicolai Meinshausen',
     author_email='xinwei.shen@stat.math.ethz.ch',
     install_requires=install_requires,
     long_description=long_description,

@@ -21,13 +21,4 @@ This function calculates the energy loss for given tensors. The loss is calculat
 as the mean of the L2 norms between \code{yt} and \code{mxt} and between \code{yt} and \code{mxpt},
 subtracted by half the mean of the L2 norm between \code{mxt} and \code{mxpt}.
 }
-\examples{
-\dontrun{
-  yt = torch_randn(5, 3)
-  mxt = torch_randn(5, 3)
-  mxpt = torch_randn(5, 3)
-  loss = energyloss(yt, mxt, mxpt)
-}
-
-}
 \keyword{internal}

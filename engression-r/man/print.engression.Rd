@@ -20,7 +20,7 @@ values achieved at several epochs during training.
 This function is a utility that displays a summary of a fitted Engression model object.
 }
 \examples{
-\dontrun{
+\donttest{
   n = 1000
   p = 5
 

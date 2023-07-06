@@ -12,15 +12,6 @@
 #' 
 #' @return A scalar representing the calculated energy loss.
 #' 
-#' @examples
-#' \dontrun{
-#'   yt = torch_randn(5, 3)
-#'   mxt = torch_randn(5, 3)
-#'   mxpt = torch_randn(5, 3)
-#'   beta = 2
-#'   loss = energylossbeta(yt, mxt, mxpt, beta)
-#' }
-#' 
 #' @keywords internal
 #' 
 energylossbeta <- function(yt,mxt,mxpt,beta){

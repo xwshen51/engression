@@ -24,14 +24,4 @@ as the mean of the L2 norms between \code{yt} and \code{mxt} and between \code{y
 each raised to the power of \code{beta}, subtracted by half the mean of the L2 norm between \code{mxt} and \code{mxpt},
 also raised to the power of \code{beta}.
 }
-\examples{
-\dontrun{
-  yt = torch_randn(5, 3)
-  mxt = torch_randn(5, 3)
-  mxpt = torch_randn(5, 3)
-  beta = 2
-  loss = energylossbeta(yt, mxt, mxpt, beta)
-}
-
-}
 \keyword{internal}

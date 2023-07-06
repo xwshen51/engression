@@ -24,7 +24,7 @@ summary includes details about the individual models as well as the overall
 ensemble.
 }
 \examples{
-\dontrun{
+\donttest{
   n = 1000
   p = 5
   X = matrix(rnorm(n*p),ncol=p)

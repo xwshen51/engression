@@ -43,7 +43,7 @@ This function computes predictions from a trained bagged Engression model. It al
 quantiles, or samples from the estimated distribution.
 }
 \examples{
-\dontrun{
+\donttest{
   n = 1000
   p = 5
   X = matrix(rnorm(n*p),ncol=p)
@@ -74,11 +74,7 @@ quantiles, or samples from the estimated distribution.
 
   ## sampling from estimated model
   Ysample = predict(engb,Xtest,type="sample",nsample=1)
-  par(mfrow=c(1,2))
-  ## plot of realized values against first variable
-  plot(Xtest[,1], Ytest, xlab="Variable 1", ylab="Observation")     
-  ## plot of sampled values against first variable
-  plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")   
+     
 }
 
 }

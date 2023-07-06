@@ -50,7 +50,7 @@ the tuning of several parameters related to model complexity.
 Variables are per default internally standardized (predictions are on original scale).
 }
 \examples{
-\dontrun{
+\donttest{
   n = 1000
   p = 5
 
@@ -76,11 +76,14 @@ Variables are per default internally standardized (predictions are on original s
 
   ## sampling from estimated model
   Ysample = predict(engr,Xtest,type="sample",nsample=1)
-  par(mfrow=c(1,2))
+   
   ## plot of realized values against first variable
+  oldpar <- par()
+  par(mfrow=c(1,2))
   plot(Xtest[,1], Ytest, xlab="Variable 1", ylab="Observation")
   ## plot of sampled values against first variable
   plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")   
+  par(oldpar)
 }
 
 }

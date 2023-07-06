@@ -1,13 +1,17 @@
 Package: engression
 Title: Engression Modelling
-Version: 0.1
-Author: Xinwei Shen <xinwei.shen@stat.math.ethz.ch>, Nicolai Meinshausen <meinshausen@stat.math.ethz.ch>
-Maintainer: Xinwei Shen <xinwei.shen@stat.math.ethz.ch>, Nicolai Meinshausen <meinshausen@stat.math.ethz.ch>
-Description: Fits engression models for nonlinear distributional regression. Predictors and targets can be univariate or multivariate. Functionality includes estimation of conditional mean, estimation of conditional quantiles, or sampling from the fitted distribution. Training is done full-batch on CPU (the python version offers GPU-accelerated stochastic gradient descent).
+Version: 0.1.1
+Authors@R: c(person("Xinwei", "Shen", role = c("aut"), email = "xinwei.shen@stat.math.ethz.ch"), person("Nicolai", "Meinshausen", role = c("aut", "cre"), email = "meinshausen@stat.math.ethz.ch")) 
+Description: Fits engression models for nonlinear distributional regression. Predictors and targets can be univariate or multivariate. Functionality includes estimation of conditional mean, estimation of conditional quantiles, or sampling from the fitted distribution. Training is done full-batch on CPU (the python version offers GPU-accelerated stochastic gradient descent). Based on "Engression: Extrapolation for nonlinear regression?" by Xinwei Shen and Nicolai Meinshausen (2023) <arxiv:2307.00835>.
+URL: https://github.com/xwshen51/engression/
+BugReports: https://github.com/xwshen51/engression/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 Imports: torch
 NeedsCompilation: no
-Packaged: 2023-06-30 11:15:58 UTC; nicolai
+Packaged: 2023-07-06 07:34:54 UTC; nicolai
+Author: Xinwei Shen [aut],
+  Nicolai Meinshausen [aut, cre]
+Maintainer: Nicolai Meinshausen <meinshausen@stat.math.ethz.ch>

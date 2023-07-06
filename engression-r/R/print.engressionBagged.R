@@ -14,7 +14,7 @@
 #'   epochs during training.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'   n = 1000
 #'   p = 5
 #'   X = matrix(rnorm(n*p),ncol=p)

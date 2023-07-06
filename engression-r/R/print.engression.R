@@ -10,7 +10,7 @@
 #' values achieved at several epochs during training.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'   n = 1000
 #'   p = 5
 #' 
