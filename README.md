@@ -1,7 +1,7 @@
 # Engression
 
-Engression is a nonlinear regression methodology proposed in the paper "[*Engression: Extrapolation for Nonlinear Regression?*](https://arxiv.org/abs/2307.00835)" by Xinwei Shen and Nicolai Meinshausen. 
-This repository contains the software implementations of engression in both R and Python.
+Engression is a nonlinear regression methodology proposed in the paper "[*Engression: Extrapolation for Nonlinear Regression?*](https://arxiv.org/abs/2307.00835)" by Xinwei Shen and Nicolai Meinshausen (2023). 
+This repository contains the software implementations of engression in both R and Python. Predictors and targets can be univariate or multivariate. Functionality includes estimation of the conditional mean, estimation of conditional quantiles, and sampling from the fitted conditional distribution.
 
 ## Installation
 
@@ -19,7 +19,7 @@ pip install -e "git+https://github.com/xwshen51/engression#egg=engression&subdir
 
 ### R package
 
-The latest release of the R package can be installed through CRAN (coming soon):
+The latest release of the R package can be installed through CRAN:
 
 ```R
 install.packages("engression")
