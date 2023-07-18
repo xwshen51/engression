@@ -1,13 +1,14 @@
 # Engression
 
-Engression is a nonlinear regression methodology proposed in the paper "[*Engression: Extrapolation for Nonlinear Regression?*](https://arxiv.org/abs/2307.00835)" by Xinwei Shen and Nicolai Meinshausen (2023). Consider targets $Y\in\mathbb{R}^k$ and predictors $X\in\mathbb{R}^d$; both variables can be univariate or multivariate. Engression can be used to 
+Engression is a nonlinear regression methodology proposed in the paper "[*Engression: Extrapolation for Nonlinear Regression?*](https://arxiv.org/abs/2307.00835)" by Xinwei Shen and Nicolai Meinshausen (2023). This directory contains the Python implementation of engression.
+
+Consider targets $Y\in\mathbb{R}^k$ and predictors $X\in\mathbb{R}^d$; both variables can be univariate or multivariate. Engression can be used to 
 * estimate the conditional mean $\mathbb{E}[Y|X=x]$ (as in least-squares regression), 
 * estimate the conditional quantiles of $Y$ given $X=x$ (as in quantile regression), and 
 * sample from the fitted conditional distribution of $Y$ given $X=x$ (as a generative model).
 
 The results in the paper show the advantages of engression over existing regression approaches in terms of extrapolation. 
-
-This repository contains the software implementations of engression in both R and Python. 
+ 
 
 ## Installation
 
