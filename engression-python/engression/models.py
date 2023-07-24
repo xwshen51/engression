@@ -69,28 +69,6 @@ class StoNet(nn.Module):
             
         Here we do not call `sample` but directly call `forward`.
         """
-        # eval_size = x.size(0)
-        # # Sampling
-        # with torch.no_grad():
-        #     x_rep = torch.repeat_interleave(x, (sample_size * torch.ones(eval_size, device=x.device)).long(), dim=0)
-        #     y_pred = self.forward(x=x_rep).detach()
-        #     y_pred = list(torch.split(y_pred, sample_size))
-            
-        # if not isinstance(target, list):
-        #     target = [target]
-        # results = []
-        # extremes = []
-        # for t in target:
-        #     if t == "mean":
-        #         results.append(torch.cat([y_pred[i].mean().unsqueeze(0) for i in range(eval_size)], dim=0).unsqueeze(1))
-        #     else:
-        #         if t == "median":
-        #             t = 0.5
-        #         assert isinstance(t, float)
-        #         results.append(torch.cat([y_pred[i].quantile(t).unsqueeze(0) for i in range(eval_size)], dim=0).unsqueeze(1))
-        #         if min(t, 1-t) * sample_size < 10:
-        #             extremes.append(t)
-        
         samples = self.sample(x=x, sample_size=sample_size, expand_dim=True)
         if not isinstance(target, list):
             target = [target]
@@ -124,20 +102,22 @@ class StoNet(nn.Module):
             expand_dim (bool, optional): whether to expand the sample dimension. Defaults to True.
 
         Returns:
-            torch.Tensor of shape (data_size, response_dim, sample_size), where response_dim could have multiple channels.
+            torch.Tensor of shape (data_size, response_dim, sample_size) if expand_dim else (data_size*sample_size, response_dim), where response_dim could have multiple channels.
         """
-        eval_size = x.size(0)
+        data_size = x.size(0) ## input data size
         with torch.no_grad():
-            # x_rep = torch.repeat_interleave(x, (sample_size * torch.ones(eval_size, device=x.device)).long(), dim=0)
+            ## repeat the data for sample_size times, get a tensor [data, data, ..., data]
             x_rep = x.repeat(sample_size, 1)
+            ## samples of shape (data_size*sample_size, response_dim) such that samples[data_size*(i-1):data_size*i,:] contains one sample for each data point, for i = 1, ..., sample_size
             samples = self.forward(x=x_rep).detach()
         if not expand_dim:
             return samples
         else:
             expand_dim = len(samples.shape)
-            samples = samples.unsqueeze(expand_dim)
-            samples = list(torch.split(samples, eval_size))
-            samples = torch.cat(samples, dim=expand_dim)
+            samples = samples.unsqueeze(expand_dim) ## (data_size*sample_size, response_dim, 1)
+            ## a list of length data_size, each element is a tensor of shape (data_size, response_dim, 1)
+            samples = list(torch.split(samples, data_size)) 
+            samples = torch.cat(samples, dim=expand_dim) ## (data_size, response_dim, sample_size)
             return samples
             # without expanding dimensions:
             # samples.reshape(-1, *samples.shape[1:-1])

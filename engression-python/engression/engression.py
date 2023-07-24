@@ -234,9 +234,9 @@ class Engressor(object):
             sample_size (int, optional): sample sizes for each x. Defaults to 100.
 
         Returns:
-            torch.Tensor or list of torch.Tensor: samples.
-                - [:,:,i] gives the i-th sample of all x.
-                - [i,:,:] gives all samples of x_i.
+            torch.Tensor of shape (data_size, response_dim, sample_size).
+                - [:,:,i] consists of the i-th sample of all x.
+                - [i,:,:] consists of all samples of x_i.
         """
         self.eval_mode()
         x = vectorize(x)

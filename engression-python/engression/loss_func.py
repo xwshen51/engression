@@ -5,8 +5,10 @@ def energy_loss(x_true, x_est, beta=1, verbose=False):
     """Loss function based on the energy score.
 
     Args:
-        x_true (torch.Tensor): iid samples from the true distribution.
-        x_est (list of torch.Tensor): a list of iid samples from the estimated distribution. ## todo: not a list!!!
+        x_true (torch.Tensor): iid samples from the true distribution of shape (data_size, data_dim)
+        x_est (list of torch.Tensor): 
+            - a list of length sample_size, where each element is a tensor of shape (data_size, data_dim) that contains one sample for each data point from the estimated distribution, or 
+            - a tensor of shape (data_size*sample_size, response_dim) such that x_est[data_size*(i-1):data_size*i,:] contains one sample for each data point, for i = 1, ..., sample_size.
         beta (float): power parameter in the energy score.
         verbose (bool): whether to return two terms of the loss.
 
