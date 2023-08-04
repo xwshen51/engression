@@ -1,6 +1,6 @@
 # Engression
 
-Engression is a nonlinear regression methodology proposed in the paper "[*Engression: Extrapolation for Nonlinear Regression?*](https://arxiv.org/abs/2307.00835)" by Xinwei Shen and Nicolai Meinshausen (2023). This directory contains the Python implementation of engression.
+Engression is a nonlinear regression methodology proposed in the paper "[*Engression: Extrapolation for Nonlinear Regression?*](https://arxiv.org/abs/2307.00835)" by Xinwei Shen and Nicolai Meinshausen (2023). This repository contains the software implementations of engression in both R and Python. 
 
 Consider targets $Y\in\mathbb{R}^k$ and predictors $X\in\mathbb{R}^d$; both variables can be univariate or multivariate. Engression can be used to 
 * estimate the conditional mean $\mathbb{E}[Y|X=x]$ (as in least-squares regression), 
@@ -42,7 +42,7 @@ devtools::install_github("xwshen51/engression", subdir = "engression-r")
 ## Usage Example
 
 ### Python
-Below is one simple demonstration. See [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_simu.ipynb) for more details on simulated data and [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_air.ipynb) for a real data example.
+Below is one simple demonstration. See [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_simu.ipynb) for more details on simulated data and [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_air.ipynb) for a real data example. We demonstrate in [another tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_bag.ipynb) how to fit a bagged engression model, which also helps with hyperparameter tuning.
 ```python
 from engression import engression
 from engression.data.simulator import preanm_simulator
