@@ -41,26 +41,25 @@ def engression(x, y,
 
 
 class Engressor(object):
+    """Engressor class.
 
+    Args:
+        in_dim (int): input dimension
+        out_dim (int): output dimension
+        num_layer (int, optional): number of layers. Defaults to 2.
+        hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
+        noise_dim (int, optional): noise dimension. Defaults to 100.
+        lr (float, optional): learning rate. Defaults to 0.001.
+        num_epoches (int, optional): number of epoches. Defaults to 500.
+        batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
+        standardize (bool, optional): whether to standardize data during training. Defaults to True.
+        device (str or torch.device, optional): device. Defaults to "cpu". Choices = ["cpu", "gpu", "cuda"].
+        check_device (bool, optional): whether to check the device. Defaults to True.
+    """
     def __init__(self, 
                  in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100,
                  lr=0.001, num_epoches=500, batch_size=None, standardize=True, 
                  device="cpu", check_device=True): 
-        """Engressor class.
-
-        Args:
-            in_dim (int): input dimension
-            out_dim (int): output dimension
-            num_layer (int, optional): number of layers. Defaults to 2.
-            hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
-            noise_dim (int, optional): noise dimension. Defaults to 100.
-            lr (float, optional): learning rate. Defaults to 0.001.
-            num_epoches (int, optional): number of epoches. Defaults to 500.
-            batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
-            standardize (bool, optional): whether to standardize data during training. Defaults to True.
-            device (str or torch.device, optional): device. Defaults to "cpu". Choices = ["cpu", "gpu", "cuda"].
-            check_device (bool, optional): whether to check the device. Defaults to True.
-        """
         super().__init__()
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim

@@ -7,12 +7,12 @@ def make_dataloader(x, y, batch_size=128, shuffle=True, num_workers=0):
     Args:
         x (torch.Tensor): data of predictors.
         y (torch.Tensor): data of responses.
-        batch_size (int, optional): _description_. Defaults to 128.
-        shuffle (bool, optional): _description_. Defaults to True.
-        num_workers (int, optional): _description_. Defaults to 0.
+        batch_size (int, optional): batch size. Defaults to 128.
+        shuffle (bool, optional): whether to shuffle data. Defaults to True.
+        num_workers (int, optional): number of workers. Defaults to 0.
 
     Returns:
-        _type_: _description_
+        DataLoader: data loader
     """
     dataset = TensorDataset(x, y)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)

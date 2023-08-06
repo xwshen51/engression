@@ -41,27 +41,27 @@ def engression_bagged(x, y,
 
 
 class BaggedEngressor(object):
+    """Bagged engressor.
+
+    Args:
+        in_dim (int): input dimension
+        out_dim (int): output dimension
+        num_layer (int, optional): number of layers. Defaults to 2.
+        hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
+        noise_dim (int, optional): noise dimension. Defaults to 100.
+        lr (float, optional): learning rate. Defaults to 0.001.
+        num_epoches (int, optional): number of epoches. Defaults to 500.
+        batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
+        device (str or torch.device, optional): device. Defaults to "cpu".
+        standardize (bool, optional): whether to standardize data. Defaults to True.
+        ensemble_size (int, optional): number of models for ensemble. Defaults to 10.
+        val_loss_type (str, optional): loss type for validation. Defaults to "energy". Choices: ["l1", "l2", "energy"].
+    """
     def __init__(self, 
                  in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100,
                  lr=0.001, num_epoches=500, batch_size=None, 
                  device="cpu", standardize=True,
                  ensemble_size=10, val_loss_type="energy"): 
-        """Bagged engressor.
-
-        Args:
-            in_dim (int): input dimension
-            out_dim (int): output dimension
-            num_layer (int, optional): number of layers. Defaults to 2.
-            hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
-            noise_dim (int, optional): noise dimension. Defaults to 100.
-            lr (float, optional): learning rate. Defaults to 0.001.
-            num_epoches (int, optional): number of epoches. Defaults to 500.
-            batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
-            device (str or torch.device, optional): device. Defaults to "cpu".
-            standardize (bool, optional): whether to standardize data. Defaults to True.
-            ensemble_size (int, optional): number of models for ensemble. Defaults to 10.
-            val_loss_type (str, optional): loss type for validation. Defaults to "energy". Choices: ["l1", "l2", "energy"].
-        """
         super().__init__()
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim

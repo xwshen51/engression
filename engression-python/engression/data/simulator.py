@@ -14,7 +14,7 @@ def preanm_simulator(true_function='softplus', n=10000, x_lower=0, x_upper=2, no
         noise_std (int, optional): standard deviation of the noise. Defaults to 1.
         noise_dist (str, optional): noise distribution. Defaults to 'gaussian'. Choices: ['gaussian', 'uniform'].
         train (bool, optional): generate data for training. Defaults to True.
-        device (str or torch.device, optional): _description_. Defaults to torch.device('cpu').
+        device (str or torch.device, optional): device. Defaults to torch.device('cpu').
 
     Returns:
         tuple of torch.Tensors: data simulated from a pre-ANM.
