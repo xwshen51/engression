@@ -122,7 +122,13 @@ class Engressor(object):
         self.x_std = torch.std(x, dim=0)
         self.y_mean = torch.mean(y, dim=0)
         self.y_std = torch.std(y, dim=0)
-        return (x - self.x_mean) / self.x_std, (y - self.y_mean) / self.y_std
+        x_standardized = (x - self.x_mean) / self.x_std
+        y_standardized = (y - self.y_mean) / self.y_std
+        self.x_mean = self.x_mean.to(self.device)
+        self.x_std = self.x_std.to(self.device)
+        self.y_mean = self.y_mean.to(self.device)
+        self.y_std = self.y_std.to(self.device)
+        return x_standardized, y_standardized
 
     def standardize_data(self, x, y=None):
         """Standardize the data, if self.standardize is True.
@@ -188,13 +194,13 @@ class Engressor(object):
             
         x = vectorize(x)
         y = vectorize(y)
-        x = x.to(self.device)
-        y = y.to(self.device)
         if self.standardize:
             if verbose:
                 print("Data is standardized for training only; the printed training losses are on the standardized scale. \n" +
                     "However during evaluation, the predictions, evaluation metrics, and plots will be on the original scale.\n")
             x, y = self._standardize_data_and_record_stats(x, y)
+        x = x.to(self.device)
+        y = y.to(self.device)
         
         if batch_size >= x.size(0)//2:
             if verbose:
