@@ -8,7 +8,7 @@ from .utils import *
 
 
 def engression(x, y, 
-               num_layer=2, hidden_dim=100, noise_dim=100,
+               num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True,
                lr=0.001, num_epoches=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
                device="cpu", standardize=True, verbose=True): 
@@ -20,6 +20,7 @@ def engression(x, y,
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
+        add_bn (bool, optional): whether to add BN layer. Defaults to True.
         lr (float, optional): learning rate. Defaults to 0.001.
         num_epoches (int, optional): number of epochs. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None.
@@ -32,7 +33,7 @@ def engression(x, y,
     Returns:
         Engressor object: a fitted engression model.
     """
-    engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
+    engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, 
                           lr=lr, num_epoches=num_epoches, batch_size=batch_size, standardize=standardize, device=device)
     engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
                     print_every_nepoch=print_every_nepoch, print_times_per_epoch=print_times_per_epoch, 
@@ -49,6 +50,7 @@ class Engressor(object):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
+        add_bn (bool, optional): whether to add BN layer. Defaults to True.
         lr (float, optional): learning rate. Defaults to 0.001.
         num_epoches (int, optional): number of epoches. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
@@ -57,13 +59,14 @@ class Engressor(object):
         check_device (bool, optional): whether to check the device. Defaults to True.
     """
     def __init__(self, 
-                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100,
+                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True,
                  lr=0.001, num_epoches=500, batch_size=None, standardize=True, 
                  device="cpu", check_device=True): 
         super().__init__()
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
+        self.add_bn = add_bn
         self.lr = lr
         self.num_epoches = num_epoches
         self.batch_size = batch_size
@@ -81,7 +84,7 @@ class Engressor(object):
         self.y_mean = None
         self.y_std = None
         
-        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim).to(self.device)
+        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         
         self.tr_loss = None
@@ -230,7 +233,7 @@ class Engressor(object):
                     self.optimizer.step()
                     if (epoch_idx == 0 or (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                         if (batch_idx + 1) % (len(train_loader) // print_times_per_epoch) == 0:
-                            print("[Epoch {} ({:.0f}%), batch {}]: energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
+                            print("[Epoch {} ({:.0f}%), batch {}] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
                                 epoch_idx + 1, 100 * epoch_idx / num_epoches, batch_idx + 1, loss.item(), loss1.item(), loss2.item()))
 
         # Evaluate performance on the training data (on the original scale)

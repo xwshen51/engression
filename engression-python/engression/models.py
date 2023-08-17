@@ -9,17 +9,18 @@ class StoLayer(nn.Module):
         in_dim (int): input dimension 
         out_dim (int): output dimension
         noise_dim (int, optional): noise dimension. Defaults to 100.
+        add_bn (bool, optional): whether to add BN layer. Defaults to True.
     """
-    def __init__(self, in_dim, out_dim, noise_dim=100):
+    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=True):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.noise_dim = noise_dim
-        layer = [
-            nn.Linear(in_dim + noise_dim, out_dim),
-            nn.BatchNorm1d(out_dim),
-            nn.ReLU(inplace=True),
-        ]
+        self.add_bn = add_bn
+        layer = [nn.Linear(in_dim + noise_dim, out_dim)]
+        if add_bn:
+            layer += [nn.BatchNorm1d(out_dim)]
+        layer += [nn.ReLU(inplace=True)]
         self.layer = nn.Sequential(*layer)
     
     def forward(self, x, inject_noise=True):
@@ -37,20 +38,23 @@ class StoNet(nn.Module):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
+        add_bn (bool, optional): whether to add BN layer. Defaults to True.
     """
-    def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100):
+    def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
+                 noise_dim=100, add_bn=True):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
+        self.add_bn = add_bn
         
-        self.input_layer = StoLayer(in_dim, hidden_dim, noise_dim)
+        self.input_layer = StoLayer(in_dim, hidden_dim, noise_dim, add_bn)
         if num_layer > 2:
-            inter_layer = [StoLayer(hidden_dim, hidden_dim, noise_dim)]
+            inter_layer = [StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]
             for i in range(num_layer - 3):
-                inter_layer.append(StoLayer(hidden_dim, hidden_dim, noise_dim))
+                inter_layer.append(StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn))
             self.inter_layer = nn.Sequential(*inter_layer)
         self.out_layer = nn.Linear(hidden_dim, out_dim)
                 
@@ -138,20 +142,19 @@ class Net(nn.Module):
         out_dim (int, optional): output dimension. Defaults to 1.
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
+        add_bn (bool, optional): whether to add BN layer. Defaults to True.
     """
-    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100):
+    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, add_bn=True):
         super().__init__()
-        net = [
-            nn.Linear(in_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.ReLU(inplace=True),
-        ]
+        net = nn.Linear(in_dim, hidden_dim)
+        if add_bn:
+            net += [nn.BatchNorm1d(hidden_dim)]
+        net += [nn.ReLU(inplace=True)]
         for _ in range(num_layer - 2):
-            net += [
-                nn.Linear(hidden_dim, hidden_dim),
-                nn.BatchNorm1d(hidden_dim),
-                nn.ReLU(inplace=True),
-            ]
+            net += [nn.Linear(hidden_dim, hidden_dim)]
+            if add_bn:
+                net += [nn.BatchNorm1d(hidden_dim)]
+            net += [nn.ReLU(inplace=True)]
         net.append(nn.Linear(hidden_dim, out_dim))
         self.net = nn.Sequential(*net)
 
