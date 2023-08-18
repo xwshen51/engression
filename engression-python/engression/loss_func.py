@@ -30,7 +30,7 @@ def energy_loss(x_true, x_est, beta=1, verbose=False):
         return (s1 - s2 / 2)
     
 
-def energy_loss_two_sample(x0, x, xp, beta=1, verbose=False):
+def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=False):
     """Loss function based on the energy score (estimated based on two samples).
     
     Args:
@@ -46,9 +46,18 @@ def energy_loss_two_sample(x0, x, xp, beta=1, verbose=False):
     x0 = vectorize(x0)
     x = vectorize(x)
     xp = vectorize(xp)
-    s1 = torch.norm(x - x0, 2, dim=1).pow(beta).mean() / 2 + torch.norm(xp - x0, 2, dim=1).pow(beta).mean() / 2
-    s2 = torch.norm(x - xp, 2, dim=1).pow(beta).mean() 
-    if verbose:
-        return torch.cat([(s1 - s2/2).reshape(1), s1.reshape(1), s2.reshape(1)], dim=0)
+    if x0p is None:
+        s1 = torch.norm(x - x0, 2, dim=1).pow(beta).mean() / 2 + torch.norm(xp - x0, 2, dim=1).pow(beta).mean() / 2
+        s2 = torch.norm(x - xp, 2, dim=1).pow(beta).mean() 
+        loss = s1 - s2/2
     else:
-        return (s1 - s2/2)
+        x0p = vectorize(x0p)
+        s1 = (torch.norm(x - x0, 2, dim=1).pow(beta).mean() + torch.norm(xp - x0, 2, dim=1).pow(beta).mean() + 
+              torch.norm(x - x0p, 2, dim=1).pow(beta).mean() + torch.norm(xp - x0p, 2, dim=1).pow(beta).mean()) / 4
+        s2 = torch.norm(x - xp, 2, dim=1).pow(beta).mean() 
+        s3 = torch.norm(x0 - x0p, 2, dim=1).pow(beta).mean() 
+        loss = s1 - s2/2 - s3/2
+    if verbose:
+        return torch.cat([loss.reshape(1), s1.reshape(1), s2.reshape(1)], dim=0)
+    else:
+        return loss
