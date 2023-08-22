@@ -10,12 +10,12 @@ with open('requirements.txt') as f:
 
 setup(
     name='engression',
-    version='0.1.2',
+    version='0.1.3',
     description='Engression Modelling',
     url='https://github.com/xwshen51/engression',
     author='Xinwei Shen and Nicolai Meinshausen',
     author_email='xinwei.shen@stat.math.ethz.ch',
-    # install_requires=install_requires,
+    install_requires=install_requires,
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(),
