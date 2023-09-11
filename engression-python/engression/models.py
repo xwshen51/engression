@@ -52,10 +52,7 @@ class StoNet(nn.Module):
         
         self.input_layer = StoLayer(in_dim, hidden_dim, noise_dim, add_bn)
         if num_layer > 2:
-            inter_layer = [StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]
-            for i in range(num_layer - 3):
-                inter_layer.append(StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn))
-            self.inter_layer = nn.Sequential(*inter_layer)
+            self.inter_layer = nn.Sequential(*[StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]*(num_layer - 2))
         self.out_layer = nn.Linear(hidden_dim, out_dim)
                 
     def predict(self, x, target=["mean"], sample_size=100):
@@ -126,10 +123,10 @@ class StoNet(nn.Module):
             # without expanding dimensions:
             # samples.reshape(-1, *samples.shape[1:-1])
         
-    def forward(self, x, inject_noise=True):
-        x = self.input_layer(x, inject_noise)
-        for i in range(self.num_layer - 2):
-            x = self.inter_layer[i](x, inject_noise)
+    def forward(self, x):
+        x = self.input_layer(x)
+        if self.num_layer > 2:
+            x = self.inter_layer(x)
         x = self.out_layer(x)
         return x
 
