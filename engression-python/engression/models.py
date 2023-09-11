@@ -23,8 +23,8 @@ class StoLayer(nn.Module):
         layer += [nn.ReLU(inplace=True)]
         self.layer = nn.Sequential(*layer)
     
-    def forward(self, x, inject_noise=True):
-        eps = torch.randn(x.size(0), self.noise_dim, device=x.device) if inject_noise else torch.zeros(x.size(0), self.noise_dim, device=x.device)
+    def forward(self, x):
+        eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
         x = torch.cat([x, eps], dim=1)
         return self.layer(x)
     
@@ -52,10 +52,11 @@ class StoNet(nn.Module):
         
         self.input_layer = StoLayer(in_dim, hidden_dim, noise_dim, add_bn)
         if num_layer > 2:
-            inter_layer = [StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]
-            for i in range(num_layer - 3):
-                inter_layer.append(StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn))
-            self.inter_layer = nn.Sequential(*inter_layer)
+            # inter_layer = [StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]
+            # for i in range(num_layer - 3):
+            #     inter_layer.append(StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn))
+            # self.inter_layer = nn.Sequential(*inter_layer)
+            self.inter_layer = nn.Sequential(*[StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]*(num_layer - 2))
         self.out_layer = nn.Linear(hidden_dim, out_dim)
                 
     def predict(self, x, target=["mean"], sample_size=100):
@@ -126,10 +127,10 @@ class StoNet(nn.Module):
             # without expanding dimensions:
             # samples.reshape(-1, *samples.shape[1:-1])
         
-    def forward(self, x, inject_noise=True):
-        x = self.input_layer(x, inject_noise)
-        for i in range(self.num_layer - 2):
-            x = self.inter_layer[i](x, inject_noise)
+    def forward(self, x):
+        x = self.input_layer(x)
+        if self.num_layer > 2:
+            x = self.inter_layer(x)
         x = self.out_layer(x)
         return x
 
@@ -146,7 +147,7 @@ class Net(nn.Module):
     """
     def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, add_bn=True):
         super().__init__()
-        net = nn.Linear(in_dim, hidden_dim)
+        net = [nn.Linear(in_dim, hidden_dim)]
         if add_bn:
             net += [nn.BatchNorm1d(hidden_dim)]
         net += [nn.ReLU(inplace=True)]
