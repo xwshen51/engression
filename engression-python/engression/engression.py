@@ -33,6 +33,8 @@ def engression(x, y,
     Returns:
         Engressor object: a fitted engression model.
     """
+    if x.shape[0] != y.shape[0]:
+        raise Exception("The sample sizes for the covariates and response do not match. Please check.")
     engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, 
                           lr=lr, num_epoches=num_epoches, batch_size=batch_size, standardize=standardize, device=device)
     engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
