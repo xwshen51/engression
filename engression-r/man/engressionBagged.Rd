@@ -13,6 +13,7 @@ engressionBagged(
   hidden_dim = 100,
   num_layer = 3,
   dropout = 0.05,
+  batch_norm = TRUE,
   num_epochs = 1000,
   lr = 10^(-3),
   beta = 1,
@@ -36,6 +37,8 @@ engressionBagged(
 \item{num_layer}{The number of layers in the model (default: 3).}
 
 \item{dropout}{The dropout rate to be used in the model (default: 0.05).}
+
+\item{batch_norm}{A boolean indicating whether to use batch-normalization (default: TRUE).}
 
 \item{num_epochs}{The number of epochs to be used in training (default: 1000).}
 

@@ -5,11 +5,12 @@
 #' be exported but can be used within the package or for internal testing purposes.
 #'
 #' @param X A matrix or data frame representing the predictors.
-#' @param Y A matrix or vector representing the target variable(s).
+#' @param Y A matrix representing the target variable(s).
 #' @param noise_dim The dimension of the noise introduced in the model (default: 100).
 #' @param hidden_dim The size of the hidden layer in the model (default: 100).
 #' @param num_layer The number of layers in the model (default: 3).
-#' @param dropout The dropout rate to be used in the model (default: 0.01).
+#' @param dropout The dropout rate to be used in the model in case no batch normalization is used (default: 0.01)
+#' @param batch_norm A boolean indicating whether to use batch-normalization (default: TRUE).
 #' @param num_epochs The number of epochs to be used in training (default: 200).
 #' @param lr The learning rate to be used in training (default: 10^-3).
 #' @param beta The beta scaling factor for energy loss (default: 1).
@@ -19,15 +20,26 @@
 #'
 #' @keywords internal
 #' 
-engressionfit <- function(X,Y, noise_dim=100, hidden_dim=100, num_layer=3, dropout=0.01, num_epochs=200,lr=10^(-3), beta=1,  silent=FALSE){
+engressionfit <- function(X,Y, noise_dim=100, hidden_dim=100, num_layer=3, dropout=0.01,batch_norm=TRUE, num_epochs=200,lr=10^(-3), beta=1,  silent=FALSE){
     in_dim = dim(X)[2]
     out_dim = dim(Y)[2]
     if(num_layer<=2){
-        model = nn_sequential( nn_linear(in_dim+noise_dim,hidden_dim),nn_dropout(dropout), nn_elu(), nn_linear(hidden_dim,out_dim))
+        if(!batch_norm){
+            model = nn_sequential( nn_linear(in_dim+noise_dim,hidden_dim),nn_dropout(dropout), nn_elu(), nn_linear(hidden_dim,out_dim))
+        }else{
+            model = nn_sequential( nn_linear(in_dim+noise_dim,hidden_dim), nn_elu(),nn_batch_norm1d(hidden_dim), nn_linear(hidden_dim,out_dim))
+
+        }
     }else{
-        hid =  nn_sequential(nn_linear(hidden_dim, hidden_dim),nn_elu())
-        if(num_layer>3) for (lay in 3:num_layer) hid = nn_sequential(hid,nn_sequential(nn_linear(hidden_dim, hidden_dim),nn_elu()) )
-        model = nn_sequential( nn_sequential(nn_linear(in_dim+noise_dim,hidden_dim),nn_dropout(dropout), nn_elu()),hid, nn_linear(hidden_dim,out_dim))  
+        if(!batch_norm){
+            hid =  nn_sequential(nn_linear(hidden_dim, hidden_dim),nn_elu())
+            if(num_layer>3) for (lay in 3:num_layer) hid = nn_sequential(hid,nn_sequential(nn_linear(hidden_dim, hidden_dim),nn_elu()) )
+            model = nn_sequential( nn_sequential(nn_linear(in_dim+noise_dim,hidden_dim),nn_dropout(dropout), nn_elu()),hid, nn_linear(hidden_dim,out_dim))  
+        }else{
+            hid =  nn_sequential(nn_linear(hidden_dim, hidden_dim),nn_elu(),nn_batch_norm1d(hidden_dim))
+            if(num_layer>3) for (lay in 3:num_layer) hid = nn_sequential(hid,nn_sequential(nn_linear(hidden_dim, hidden_dim),nn_elu(),nn_batch_norm1d(hidden_dim)) )
+            model = nn_sequential( nn_sequential(nn_linear(in_dim+noise_dim,hidden_dim), nn_elu(),nn_batch_norm1d(hidden_dim)),hid, nn_linear(hidden_dim,out_dim)) 
+        }
     }
     model$train()
 
@@ -59,6 +71,7 @@ engressionfit <- function(X,Y, noise_dim=100, hidden_dim=100, num_layer=3, dropo
             if(iter %in% printat){cat("\n");  print(lossvec[iter,])}
         }
     } 
+    if(batch_norm) model$train(mode=FALSE)
 
     if(noise_dim>0){
        engressor = function(x) as.matrix(model( torch_tensor(cbind(x, matrix(rnorm(nrow(x)*noise_dim),ncol=noise_dim) ), dtype=torch_float())),ncol=out_dim)

@@ -29,6 +29,7 @@ print.engression <- function(x, ...){
     cat("\n \t  hidden dimensions: ",x$hidden_dim)
     cat("\n \t  number of layers: ",x$num_layer)
     cat("\n \t  dropout rate: ",x$dropout)
+    cat("\n \t  batch normalization: ",x$batch_norm)
     cat("\n \t  number of epochs: ",x$num_epochs)
     cat("\n \t  learning rate: ",x$lr)
     cat("\n \t  standardization: ",x$standardize)

@@ -11,6 +11,7 @@ engressionfit(
   hidden_dim = 100,
   num_layer = 3,
   dropout = 0.01,
+  batch_norm = TRUE,
   num_epochs = 200,
   lr = 10^(-3),
   beta = 1,
@@ -20,7 +21,7 @@ engressionfit(
 \arguments{
 \item{X}{A matrix or data frame representing the predictors.}
 
-\item{Y}{A matrix or vector representing the target variable(s).}
+\item{Y}{A matrix representing the target variable(s).}
 
 \item{noise_dim}{The dimension of the noise introduced in the model (default: 100).}
 
@@ -28,7 +29,9 @@ engressionfit(
 
 \item{num_layer}{The number of layers in the model (default: 3).}
 
-\item{dropout}{The dropout rate to be used in the model (default: 0.01).}
+\item{dropout}{The dropout rate to be used in the model in case no batch normalization is used (default: 0.01)}
+
+\item{batch_norm}{A boolean indicating whether to use batch-normalization (default: TRUE).}
 
 \item{num_epochs}{The number of epochs to be used in training (default: 200).}
 

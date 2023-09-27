@@ -14,7 +14,7 @@
 #' @keywords internal
 #' 
 energyloss <- function(yt,mxt,mxpt){
-  s1 = torch_mean(torch_norm(yt - mxt, 2, dim=1)) / 2 + torch_mean(torch_norm(yt - mxpt, 2, dim=1)) / 2
-  s2 = torch_mean(torch_norm(mxt - mxpt, 2, dim=1))
+  s1 = torch_mean(torch_norm(yt - mxt, 2, dim=2)) / 2 + torch_mean(torch_norm(yt - mxpt, 2, dim=2)) / 2
+  s2 = torch_mean(torch_norm(mxt - mxpt, 2, dim=2))
   return (s1 - s2/2)
 }

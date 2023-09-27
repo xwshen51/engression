@@ -15,7 +15,7 @@
 #' @keywords internal
 #' 
 energylossbeta <- function(yt,mxt,mxpt,beta){
-  s1 = torch_pow(torch_mean(torch_norm(yt - mxt, 2, dim=1)),beta) / 2 + torch_pow(torch_mean(torch_norm(yt - mxpt, 2, dim=1)),beta) / 2
-  s2 = torch_pow(torch_mean(torch_norm(mxt - mxpt, 2, dim=1)),beta)
+  s1 = torch_pow(torch_mean(torch_norm(yt - mxt, 2, dim=2)),beta) / 2 + torch_pow(torch_mean(torch_norm(yt - mxpt, 2, dim=2)),beta) / 2
+  s2 = torch_pow(torch_mean(torch_norm(mxt - mxpt, 2, dim=2)),beta)
   return (s1 - s2/2)
 }

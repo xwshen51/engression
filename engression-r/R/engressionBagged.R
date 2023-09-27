@@ -12,6 +12,7 @@
 #' @param hidden_dim The size of the hidden layer in the model (default: 100).
 #' @param num_layer The number of layers in the model (default: 3).
 #' @param dropout The dropout rate to be used in the model (default: 0.05).
+#' @param batch_norm A boolean indicating whether to use batch-normalization (default: TRUE).
 #' @param num_epochs The number of epochs to be used in training (default: 1000).
 #' @param lr The learning rate to be used in training (default: 10^-3).
 #' @param beta The beta scaling factor for energy loss (default: 1).
@@ -64,7 +65,7 @@
 #'
 #' @export
 #' 
-engressionBagged <- function(X,Y, K=5, keepoutbag=TRUE, noise_dim=10, hidden_dim=100, num_layer=3, dropout=0.05, num_epochs=1000,lr=10^(-3),beta=1, silent=FALSE, standardize=TRUE){
+engressionBagged <- function(X,Y, K=5, keepoutbag=TRUE, noise_dim=10, hidden_dim=100, num_layer=3, dropout=0.05, batch_norm=TRUE, num_epochs=1000,lr=10^(-3),beta=1, silent=FALSE, standardize=TRUE){
 
     if (is.data.frame(X)) {
         if (any(sapply(X, is.factor)))   warning("Data frame contains factor variables. Mapping to numeric values. Dummy variables would need to be created explicitly by the user.")
@@ -92,10 +93,10 @@ engressionBagged <- function(X,Y, K=5, keepoutbag=TRUE, noise_dim=10, hidden_dim
         if(k>=4) pr="th"
         if(!silent) cat(paste("\n fitting ",k,"-", pr," out of ",K," engression models \n",sep=""))
         useinbag = which(apply(inbag==k,1,any))
-        models[[k]] = engression(X[useinbag,],Y[useinbag],  noise_dim=noise_dim, hidden_dim=hidden_dim, num_layer=num_layer, dropout=dropout, num_epochs=num_epochs,lr=lr,beta=beta, silent=silent, standardize=standardize)
+        models[[k]] = engression(X[useinbag,],Y[useinbag],  noise_dim=noise_dim, hidden_dim=hidden_dim, num_layer=num_layer, dropout=dropout, batch_norm=batch_norm, num_epochs=num_epochs,lr=lr,beta=beta, silent=silent, standardize=standardize)
     }
 
-    engBagged = list(models= models, inbag=if(keepoutbag) inbag else NULL, Xtrain=if(keepoutbag) X else NULL, noise_dim=noise_dim,hidden_dim=hidden_dim,num_layer=num_layer,dropout=dropout, num_epochs=num_epochs,lr=lr, standardize=standardize)
+    engBagged = list(models= models, inbag=if(keepoutbag) inbag else NULL, Xtrain=if(keepoutbag) X else NULL, noise_dim=noise_dim,hidden_dim=hidden_dim,num_layer=num_layer,dropout=dropout, batch_norm=batch_norm, num_epochs=num_epochs,lr=lr, standardize=standardize)
     class(engBagged) = "engressionBagged"
     print(engBagged)
     return(engBagged)

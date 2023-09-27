@@ -9,7 +9,8 @@
 #' @param noise_dim The dimension of the noise introduced in the model (default: 5).
 #' @param hidden_dim The size of the hidden layer in the model (default: 100).
 #' @param num_layer The number of layers in the model (default: 3).
-#' @param dropout The dropout rate to be used in the model (default: 0.05).
+#' @param dropout The dropout rate to be used in the model in case no batch normalization is used (default: 0.01)
+#' @param batch_norm A boolean indicating whether to use batch-normalization (default: TRUE).
 #' @param num_epochs The number of epochs to be used in training (default: 1000).
 #' @param lr The learning rate to be used in training (default: 10^-3).
 #' @param beta The beta scaling factor for energy loss (default: 1).
@@ -57,13 +58,14 @@
 #' 
 #' @export
 
-engression <- function(X,Y,  noise_dim=5, hidden_dim=100, num_layer=3, dropout=0.05, num_epochs=1000,lr=10^(-3),beta=1, silent=FALSE, standardize=TRUE){
+engression <- function(X,Y,  noise_dim=5, hidden_dim=100, num_layer=3, dropout=0.05, batch_norm=TRUE, num_epochs=1000,lr=10^(-3),beta=1, silent=FALSE, standardize=TRUE){
 
     if (is.data.frame(X)) {
         if (any(sapply(X, is.factor)))   warning("Data frame contains factor variables. Mapping to numeric values. Dummy variables would need to be created explicitly by the user.")
         X = dftomat(X)
     }
 
+    if (is.vector(X) && !is.numeric(X)) X <- as.numeric(X)
     if (is.vector(X) && is.numeric(X)) X <- matrix(X, ncol = 1)
     if(is.vector(Y)) Y= matrix(Y, ncol=1)
     for (k in 1:ncol(Y)) Y[,k] = as.numeric(Y[,k])
@@ -89,8 +91,8 @@ engression <- function(X,Y,  noise_dim=5, hidden_dim=100, num_layer=3, dropout=0
         X  = sweep(sweep(X,2,muX,FUN="-"),2,sddX,FUN="/")
         Y = sweep(sweep(Y,2,muY,FUN="-"),2,sddY,FUN="/")
     }
-    eng = engressionfit(X,Y, noise_dim=noise_dim,hidden_dim=hidden_dim,num_layer=num_layer,dropout=dropout, num_epochs=num_epochs,lr=lr,beta=beta, silent=silent)
-    engressor = list(engressor = eng$engressor, lossvec= eng$lossvec,  muX=muX, sddX=sddX,muY=muY, sddY=sddY, standardize=standardize, noise_dim=noise_dim,hidden_dim=hidden_dim,num_layer=num_layer,dropout=dropout, num_epochs=num_epochs,lr=lr)
+    eng = engressionfit(X,Y, noise_dim=noise_dim,hidden_dim=hidden_dim,num_layer=num_layer,dropout=dropout, batch_norm=batch_norm, num_epochs=num_epochs,lr=lr,beta=beta, silent=silent)
+    engressor = list(engressor = eng$engressor, lossvec= eng$lossvec,  muX=muX, sddX=sddX,muY=muY, sddY=sddY, standardize=standardize, noise_dim=noise_dim,hidden_dim=hidden_dim,num_layer=num_layer,dropout=dropout, batch_norm=batch_norm, num_epochs=num_epochs,lr=lr)
     class(engressor) = "engression"
     return(engressor)
 }
