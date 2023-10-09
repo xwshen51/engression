@@ -77,10 +77,6 @@ class BaggedEngressor(object):
             device = torch.device(device)
         self.device = device
         self.standardize = standardize
-        self.x_mean = None
-        self.x_std = None
-        self.y_mean = None
-        self.y_std = None
         self.split_mask = None
         
         # Build ensemble models.
