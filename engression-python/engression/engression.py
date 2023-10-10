@@ -195,7 +195,7 @@ class Engressor(object):
         if num_epoches is None:
             num_epoches = self.num_epoches
         if batch_size is None:
-            batch_size = self.batch_size
+            batch_size = self.batch_size if self.batch_size is not None else x.size(0)
         if standardize:
             self.standardize = standardize
             
