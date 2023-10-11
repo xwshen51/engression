@@ -271,6 +271,9 @@ class Engressor(object):
         x = self.standardize_data(x)
         y_pred = self.model.predict(x, target, sample_size)
         y_pred = self.unstandardize_data(y_pred)
+        if isinstance(target, list):
+            for i in range(len(y_pred)):
+                y_pred[i] = self.unstandardize_data(y_pred[i])
         return y_pred
     
     def sample(self, x, sample_size=100, expand_dim=True):
