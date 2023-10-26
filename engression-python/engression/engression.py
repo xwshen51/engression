@@ -7,7 +7,7 @@ from .data.loader import make_dataloader
 from .utils import *
 
 
-def engression(x, y, 
+def engression(x, y, classification=False,
                num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True,
                lr=0.001, num_epoches=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
@@ -17,6 +17,7 @@ def engression(x, y,
     Args:
         x (torch.Tensor): training data of predictors.
         y (torch.Tensor): training data of responses.
+        classification (bool, optional): whether it is a classification task.
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
@@ -36,7 +37,7 @@ def engression(x, y,
     if x.shape[0] != y.shape[0]:
         raise Exception("The sample sizes for the covariates and response do not match. Please check.")
     engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, 
-                          lr=lr, num_epoches=num_epoches, batch_size=batch_size, standardize=standardize, device=device)
+                          classification=classification, lr=lr, num_epoches=num_epoches, batch_size=batch_size, standardize=standardize, device=device)
     engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
                     print_every_nepoch=print_every_nepoch, print_times_per_epoch=print_times_per_epoch, 
                     standardize=standardize, verbose=verbose)
@@ -53,6 +54,7 @@ class Engressor(object):
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
+        classification (bool, optional): whether it is a classification task.
         lr (float, optional): learning rate. Defaults to 0.001.
         num_epoches (int, optional): number of epoches. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
@@ -61,7 +63,7 @@ class Engressor(object):
         check_device (bool, optional): whether to check the device. Defaults to True.
     """
     def __init__(self, 
-                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True,
+                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True, classification=False,
                  lr=0.001, num_epoches=500, batch_size=None, standardize=True, 
                  device="cpu", check_device=True): 
         super().__init__()
@@ -69,6 +71,7 @@ class Engressor(object):
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
+        self.classification = classification
         self.lr = lr
         self.num_epoches = num_epoches
         self.batch_size = batch_size
@@ -86,7 +89,7 @@ class Engressor(object):
         self.y_mean = None
         self.y_std = None
         
-        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn).to(self.device)
+        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, classification).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         
         self.tr_loss = None
@@ -125,10 +128,14 @@ class Engressor(object):
         """
         self.x_mean = torch.mean(x, dim=0)
         self.x_std = torch.std(x, dim=0)
-        self.y_mean = torch.mean(y, dim=0)
-        self.y_std = torch.std(y, dim=0)
         self.x_std[self.x_std == 0] += 1e-5
-        self.y_std[self.y_std == 0] += 1e-5
+        if not self.classification:
+            self.y_mean = torch.mean(y, dim=0)
+            self.y_std = torch.std(y, dim=0)
+            self.y_std[self.y_std == 0] += 1e-5
+        else:
+            self.y_mean = torch.zeros(y.shape[1:]).unsqueeze(0)
+            self.y_std = torch.ones(y.shape[1:]).unsqueeze(0)
         x_standardized = (x - self.x_mean) / self.x_std
         y_standardized = (y - self.y_mean) / self.y_std
         self.x_mean = self.x_mean.to(self.device)
