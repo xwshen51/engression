@@ -39,10 +39,10 @@ class StoNet(nn.Module):
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
-        sigmoid (bool, optional): whether to add sigmoid at the end. Defaults to False.
+        classification (bool, optional): whether to add sigmoid or softmax at the end for classification. Defaults to False.
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=True, sigmoid=False):
+                 noise_dim=100, add_bn=True, classification=False):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -50,14 +50,15 @@ class StoNet(nn.Module):
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
-        self.sigmoid = sigmoid
+        self.classification = classification
         
         self.input_layer = StoLayer(in_dim, hidden_dim, noise_dim, add_bn)
         if num_layer > 2:
             self.inter_layer = nn.Sequential(*[StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]*(num_layer - 2))
         self.out_layer = nn.Linear(hidden_dim, out_dim)
-        if sigmoid:
-            self.out_layer = nn.Sequential(*[self.out_layer, nn.Sigmoid()])
+        if classification:
+            out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
+            self.out_layer = nn.Sequential(*[self.out_layer, out_act])
                 
     def predict(self, x, target=["mean"], sample_size=100):
         """Point prediction.
@@ -144,17 +145,17 @@ class Net(nn.Module):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
-        sigmoid (bool, optional): whether to add sigmoid at the end. Defaults to False.
+        classification (bool, optional): whether to add sigmoid or softmax at the end for classification. Defaults to False.
     """
     def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, 
-                 add_bn=True, sigmoid=False):
+                 add_bn=True, classification=False):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.add_bn = add_bn
-        self.sigmoid = sigmoid
+        self.classification = classification
         
         net = [nn.Linear(in_dim, hidden_dim)]
         if add_bn:
@@ -166,8 +167,9 @@ class Net(nn.Module):
                 net += [nn.BatchNorm1d(hidden_dim)]
             net += [nn.ReLU(inplace=True)]
         net.append(nn.Linear(hidden_dim, out_dim))
-        if sigmoid:
-            net.append(nn.Sigmoid())
+        if classification:
+            out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
+            net.append(out_act)
         self.net = nn.Sequential(*net)
 
     def forward(self, x):
