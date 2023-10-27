@@ -37,7 +37,7 @@ def engression(x, y, classification=False,
     if x.shape[0] != y.shape[0]:
         raise Exception("The sample sizes for the covariates and response do not match. Please check.")
     engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, 
-                          classification=classification, lr=lr, num_epoches=num_epoches, batch_size=batch_size, standardize=standardize, device=device)
+                          classification=classification, lr=lr, num_epoches=num_epoches, batch_size=batch_size, standardize=standardize, device=device, check_device=verbose)
     engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
                     print_every_nepoch=print_every_nepoch, print_times_per_epoch=print_times_per_epoch, 
                     standardize=standardize, verbose=verbose)
