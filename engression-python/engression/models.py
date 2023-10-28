@@ -27,6 +27,39 @@ class StoLayer(nn.Module):
         eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
         x = torch.cat([x, eps], dim=1)
         return self.layer(x)
+
+
+class StoResBlock(nn.Module):
+    """A stochastic residual net block.
+
+    Args:
+        dim (int): dimension of input and output.
+        noise_sim (int, optional): noise dimension. Defaults to 100.
+    """
+    def __init__(self, dim, noise_dim=100):
+        super().__init__()
+        self.dim = dim
+        self.noise_dim = noise_dim
+        self.fc1 = nn.Sequential(
+            nn.Linear(dim + noise_dim, dim),
+            nn.BatchNorm1d(dim),
+            nn.ReLU(inplace=True)
+        )
+        self.fc2 = nn.Sequential(
+            nn.Linear(dim + noise_dim, dim),
+            nn.BatchNorm1d(dim),
+        )
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
+        out = torch.cat([x, eps], dim=1)
+        out = self.fc1(out)
+        eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
+        out = torch.cat([out, eps], dim=1)
+        out = self.fc2(out)
+        out += x
+        return self.relu(out)
     
     
 class StoNet(nn.Module):
@@ -40,21 +73,36 @@ class StoNet(nn.Module):
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         classification (bool, optional): whether to add sigmoid or softmax at the end for classification. Defaults to False.
+        resblock (bool, optional): whether to use residual blocks. Defaults to True.
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=True, classification=False):
+                 noise_dim=100, add_bn=True, classification=False, resblock=True):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
-        self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
         self.classification = classification
         
+        if resblock:
+            if num_layer <= 2:
+                # print("The number of layers must exceed 2 for additing residual blocks. Currently no residual block added.")
+                resblock = False
+            elif num_layer % 2 != 0:
+                num_layer += 1
+                # print("The number of layers must be an even number for residual blocks. Added one layer.")
+            num_blocks = (num_layer - 2) // 2
+            self.num_blocks = num_blocks
+        self.resblock = resblock
+        self.num_layer = num_layer
+        
         self.input_layer = StoLayer(in_dim, hidden_dim, noise_dim, add_bn)
-        if num_layer > 2:
-            self.inter_layer = nn.Sequential(*[StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]*(num_layer - 2))
+        if resblock:
+            self.inter_layer = nn.Sequential(*[StoResBlock(hidden_dim)]*num_blocks)
+        else:
+            if num_layer > 2:
+                self.inter_layer = nn.Sequential(*[StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]*(num_layer - 2))
         self.out_layer = nn.Linear(hidden_dim, out_dim)
         if classification:
             out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
@@ -174,3 +222,60 @@ class Net(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+
+class ResMLPBlock(nn.Module):
+    """MLP residual net block.
+
+    Args:
+        dim (int): dimension of input and output.
+    """
+    def __init__(self, dim):
+        super().__init__()
+        self.fc1 = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.BatchNorm1d(dim),
+            nn.ReLU(inplace=True)
+        )
+        self.fc2 = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.BatchNorm1d(dim),
+        )
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        out = self.fc2(self.fc1(x))
+        out += x
+        return self.relu(out)
+
+
+class ResMLP(nn.Module):
+    """Residual MLP.
+
+    Args:
+        in_dim (int, optional): input dimension. Defaults to 1.
+        out_dim (int, optional): output dimension. Defaults to 1.
+        num_layer (int, optional): number of layers. Defaults to 2.
+        hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
+    """
+    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100):
+        super().__init__()
+        if num_layer % 2 != 0:
+            num_layer += 1
+            print("The number of layers must be an even number for residual blocks. Added one layer.")
+        num_blocks = (num_layer - 2) // 2
+        self.num_blocks = num_blocks
+        self.in_layer = nn.Sequential(
+            nn.Linear(in_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True)
+        )
+        if num_blocks > 0:
+            self.inter_layer = nn.Sequential(*[ResMLPBlock(hidden_dim)]*num_blocks)
+        self.out_layer = nn.Linear(hidden_dim, out_dim)
+
+    def forward(self, x):
+        out = self.in_layer(x)
+        if self.num_blocks > 0:
+            out = self.inter_layer(out)
+        return self.out_layer(out)

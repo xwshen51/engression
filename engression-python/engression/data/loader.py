@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
-def make_dataloader(x, y, batch_size=128, shuffle=True, num_workers=0):
+def make_dataloader(x, y=None, batch_size=128, shuffle=True, num_workers=0):
     """Make dataloader.
 
     Args:
@@ -14,7 +14,10 @@ def make_dataloader(x, y, batch_size=128, shuffle=True, num_workers=0):
     Returns:
         DataLoader: data loader
     """
-    dataset = TensorDataset(x, y)
+    if y is None:
+        dataset = TensorDataset(x)
+    else:
+        dataset = TensorDataset(x, y)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return dataloader
 

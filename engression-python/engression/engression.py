@@ -8,7 +8,8 @@ from .utils import *
 
 
 def engression(x, y, classification=False,
-               num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True,
+               num_layer=2, hidden_dim=100, noise_dim=100, 
+               add_bn=True, resblock=True,
                lr=0.001, num_epoches=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
                device="cpu", standardize=True, verbose=True): 
@@ -22,6 +23,7 @@ def engression(x, y, classification=False,
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
+        resblock (bool, optional): whether to use residual blocks. Defaults to True.
         lr (float, optional): learning rate. Defaults to 0.001.
         num_epoches (int, optional): number of epochs. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None.
@@ -36,8 +38,11 @@ def engression(x, y, classification=False,
     """
     if x.shape[0] != y.shape[0]:
         raise Exception("The sample sizes for the covariates and response do not match. Please check.")
-    engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, 
-                          classification=classification, lr=lr, num_epoches=num_epoches, batch_size=batch_size, standardize=standardize, device=device, check_device=verbose)
+    engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], 
+                          num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, 
+                          classification=classification, resblock=resblock, 
+                          lr=lr, num_epoches=num_epoches, batch_size=batch_size, 
+                          standardize=standardize, device=device, check_device=verbose, verbose=verbose)
     engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
                     print_every_nepoch=print_every_nepoch, print_times_per_epoch=print_times_per_epoch, 
                     standardize=standardize, verbose=verbose)
@@ -55,6 +60,7 @@ class Engressor(object):
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         classification (bool, optional): whether it is a classification task.
+        resblock (bool, optional): whether to use residual blocks. Defaults to True.
         lr (float, optional): learning rate. Defaults to 0.001.
         num_epoches (int, optional): number of epoches. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
@@ -63,15 +69,17 @@ class Engressor(object):
         check_device (bool, optional): whether to check the device. Defaults to True.
     """
     def __init__(self, 
-                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True, classification=False,
+                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True, 
+                 classification=False, resblock=True, 
                  lr=0.001, num_epoches=500, batch_size=None, standardize=True, 
-                 device="cpu", check_device=True): 
+                 device="cpu", check_device=True, verbose=True): 
         super().__init__()
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
         self.classification = classification
+        self.resblock = resblock
         self.lr = lr
         self.num_epoches = num_epoches
         self.batch_size = batch_size
@@ -89,7 +97,13 @@ class Engressor(object):
         self.y_mean = None
         self.y_std = None
         
-        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, classification).to(self.device)
+        if verbose:
+            if num_layer > 2 and resblock:
+                print("As NN has more than 2 layers, residual blocks are used by default; turn it off by setting 'resblock=False'.")
+                if num_layer % 2 != 0:
+                    print("The number of layers must be an even number for residual blocks. Added one layer.")
+                print("")
+        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, classification, resblock).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         
         self.tr_loss = None
@@ -106,6 +120,7 @@ class Engressor(object):
               "\t number of layers: {}\n".format(self.num_layer) +
               "\t hidden dimensions: {}\n".format(self.hidden_dim) +
               "\t noise dimensions: {}\n".format(self.noise_dim) +
+              "\t residual blocks: {}\n".format(self.resblock) +
               "\t number of epochs: {}\n".format(self.num_epoches) +
               "\t batch size: {}\n".format(self.batch_size) +
               "\t learning rate: {}\n".format(self.lr) +
