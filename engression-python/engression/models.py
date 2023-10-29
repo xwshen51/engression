@@ -73,10 +73,10 @@ class StoNet(nn.Module):
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         classification (bool, optional): whether to add sigmoid or softmax at the end for classification. Defaults to False.
-        resblock (bool, optional): whether to use residual blocks. Defaults to True.
+        resblock (bool, optional): whether to use residual blocks. Defaults to False.
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=True, classification=False, resblock=True):
+                 noise_dim=100, add_bn=True, classification=False, resblock=False):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
