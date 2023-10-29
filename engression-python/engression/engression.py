@@ -9,7 +9,7 @@ from .utils import *
 
 def engression(x, y, classification=False,
                num_layer=2, hidden_dim=100, noise_dim=100, 
-               add_bn=True, resblock=False,
+               add_bn=True, resblock=False, beta=1,
                lr=0.001, num_epoches=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
                device="cpu", standardize=True, verbose=True): 
@@ -24,6 +24,7 @@ def engression(x, y, classification=False,
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
+        beta (float, optional): power parameter in the energy loss.
         lr (float, optional): learning rate. Defaults to 0.001.
         num_epoches (int, optional): number of epochs. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None.
@@ -39,8 +40,8 @@ def engression(x, y, classification=False,
     if x.shape[0] != y.shape[0]:
         raise Exception("The sample sizes for the covariates and response do not match. Please check.")
     engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], 
-                          num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, 
-                          classification=classification, resblock=resblock, 
+                          num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
+                          classification=classification, resblock=resblock, add_bn=add_bn, beta=beta,
                           lr=lr, num_epoches=num_epoches, batch_size=batch_size, 
                           standardize=standardize, device=device, check_device=verbose, verbose=verbose)
     engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
@@ -58,9 +59,10 @@ class Engressor(object):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
-        add_bn (bool, optional): whether to add BN layer. Defaults to True.
         classification (bool, optional): whether it is a classification task.
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
+        add_bn (bool, optional): whether to add BN layer. Defaults to True.
+        beta (float, optional): power parameter in the energy loss.
         lr (float, optional): learning rate. Defaults to 0.001.
         num_epoches (int, optional): number of epoches. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
@@ -69,17 +71,18 @@ class Engressor(object):
         check_device (bool, optional): whether to check the device. Defaults to True.
     """
     def __init__(self, 
-                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, add_bn=True, 
-                 classification=False, resblock=False, 
+                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, 
+                 classification=False, resblock=False, add_bn=True, beta=1,
                  lr=0.001, num_epoches=500, batch_size=None, standardize=True, 
                  device="cpu", check_device=True, verbose=True): 
         super().__init__()
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
-        self.add_bn = add_bn
         self.classification = classification
         self.resblock = resblock
+        self.add_bn = add_bn
+        self.beta = beta
         self.lr = lr
         self.num_epoches = num_epoches
         self.batch_size = batch_size
@@ -239,7 +242,7 @@ class Engressor(object):
                 self.model.zero_grad()
                 y_sample1 = self.model(x)
                 y_sample2 = self.model(x)
-                loss, loss1, loss2 = energy_loss_two_sample(y, y_sample1, y_sample2, verbose=True)
+                loss, loss1, loss2 = energy_loss_two_sample(y, y_sample1, y_sample2, beta=self.beta, verbose=True)
                 loss.backward()
                 self.optimizer.step()
                 if (epoch_idx == 0 or  (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
@@ -254,7 +257,7 @@ class Engressor(object):
                     self.model.zero_grad()
                     y_sample1 = self.model(x_batch)
                     y_sample2 = self.model(x_batch)
-                    loss, loss1, loss2 = energy_loss_two_sample(y_batch, y_sample1, y_sample2, verbose=True)
+                    loss, loss1, loss2 = energy_loss_two_sample(y_batch, y_sample1, y_sample2, beta=self.beta, verbose=True)
                     loss.backward()
                     self.optimizer.step()
                     if (epoch_idx == 0 or (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
