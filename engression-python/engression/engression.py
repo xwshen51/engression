@@ -7,7 +7,7 @@ from .data.loader import make_dataloader
 from .utils import *
 
 
-def engression(x, y, classification=False,
+def engression(x, y, sigmoid=False,
                num_layer=2, hidden_dim=100, noise_dim=100, 
                add_bn=True, resblock=False, beta=1,
                lr=0.001, num_epoches=500, batch_size=None, 
@@ -18,12 +18,12 @@ def engression(x, y, classification=False,
     Args:
         x (torch.Tensor): training data of predictors.
         y (torch.Tensor): training data of responses.
-        classification (bool, optional): whether it is a classification task.
-        num_layer (int, optional): number of layers. Defaults to 2.
+        sigmoid (bool, optional): whether to add a sigmoid function at the model output.
+        num_layer (int, optional): number of (linear) layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
-        resblock (bool, optional): whether to use residual blocks. Defaults to False.
+        resblock (bool, optional): whether to use residual blocks (skip connections). Defaults to False.
         beta (float, optional): power parameter in the energy loss.
         lr (float, optional): learning rate. Defaults to 0.001.
         num_epoches (int, optional): number of epochs. Defaults to 500.
@@ -41,7 +41,7 @@ def engression(x, y, classification=False,
         raise Exception("The sample sizes for the covariates and response do not match. Please check.")
     engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], 
                           num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
-                          classification=classification, resblock=resblock, add_bn=add_bn, beta=beta,
+                          sigmoid=sigmoid, resblock=resblock, add_bn=add_bn, beta=beta,
                           lr=lr, num_epoches=num_epoches, batch_size=batch_size, 
                           standardize=standardize, device=device, check_device=verbose, verbose=verbose)
     engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
@@ -59,7 +59,7 @@ class Engressor(object):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
-        classification (bool, optional): whether it is a classification task.
+        sigmoid (bool, optional): whether to add a sigmoid function at the model output. Defaults to False.
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         beta (float, optional): power parameter in the energy loss.
@@ -72,14 +72,14 @@ class Engressor(object):
     """
     def __init__(self, 
                  in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, 
-                 classification=False, resblock=False, add_bn=True, beta=1,
+                 sigmoid=False, resblock=False, add_bn=True, beta=1,
                  lr=0.001, num_epoches=500, batch_size=None, standardize=True, 
                  device="cpu", check_device=True, verbose=True): 
         super().__init__()
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
-        self.classification = classification
+        self.sigmoid = sigmoid
         self.resblock = resblock
         self.add_bn = add_bn
         self.beta = beta
@@ -102,11 +102,10 @@ class Engressor(object):
         
         if verbose:
             if num_layer > 2 and resblock:
-                print("As NN has more than 2 layers, residual blocks are used by default; turn it off by setting 'resblock=False'.")
                 if num_layer % 2 != 0:
                     print("The number of layers must be an even number for residual blocks. Added one layer.")
                 print("")
-        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, classification, resblock).to(self.device)
+        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, sigmoid, resblock).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         
         self.tr_loss = None
@@ -147,7 +146,7 @@ class Engressor(object):
         self.x_mean = torch.mean(x, dim=0)
         self.x_std = torch.std(x, dim=0)
         self.x_std[self.x_std == 0] += 1e-5
-        if not self.classification:
+        if not self.sigmoid:
             self.y_mean = torch.mean(y, dim=0)
             self.y_std = torch.std(y, dim=0)
             self.y_std[self.y_std == 0] += 1e-5
