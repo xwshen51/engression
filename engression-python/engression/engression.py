@@ -278,7 +278,7 @@ class Engressor(object):
             print("\nPrediction-loss E(|Y-Yhat|) and variance-loss E(|Yhat-Yhat'|) should ideally be equally large" +
                 "\n-- consider training for more epochs or adjusting hyperparameters if there is a mismatch ")
     
-    def predict(self, x, target="mean", sample_size=100):
+    def predict_onebatch(self, x, target="mean", sample_size=100):
         """Point prediction.
 
         Args:
@@ -301,7 +301,38 @@ class Engressor(object):
             y_pred = self.unstandardize_data(y_pred)
         return y_pred
     
-    def sample(self, x, sample_size=100, expand_dim=True):
+    def predict_batch(self, x, target="mean", sample_size=100, batch_size=None):
+        if batch_size is not None or batch_size < x.shape[0]:
+            test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
+            pred = []
+            for (x_batch,) in test_loader:
+                pred.append(self.predict_onebatch(x_batch, target, sample_size))
+            pred = torch.cat(pred, dim=0)
+        else:
+            pred = self.predict_onebatch(x, target, sample_size)
+        return pred
+    
+    def predict(self, x, target="mean", sample_size=100):
+        """Point prediction that adaptively adjusts the batch size according to the GPU memory.
+
+        Args:
+            x (_type_): _description_
+            target (str, optional): _description_. Defaults to "mean".
+            sample_size (int, optional): _description_. Defaults to 100.
+
+        Returns:
+            _type_: _description_
+        """
+        batch_size = x.shape[0]
+        while True:
+            try:
+                pred = self.predict_batch(x, target, sample_size, batch_size)
+                break
+            except RuntimeError:
+                batch_size = batch_size // 2
+        return pred
+    
+    def sample_onebatch(self, x, sample_size=100, expand_dim=True):
         """Sample new response data.
 
         Args:
@@ -321,6 +352,27 @@ class Engressor(object):
         y_samples = self.model.sample(x, sample_size, expand_dim=expand_dim)
         y_samples = self.unstandardize_data(y_samples)
         return y_samples
+    
+    def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None):
+        if batch_size is not None or batch_size < x.shape[0]:
+            test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
+            samples = []
+            for (x_batch,) in test_loader:
+                samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim))
+            samples = torch.cat(samples, dim=0)
+        else:
+            samples = self.sample_onebatch(x, sample_size, expand_dim)
+        return samples
+    
+    def sample(self, x, sample_size=100, expand_dim=True):
+        batch_size = x.shape[0]
+        while True:
+            try:
+                samples = self.sample_batch(x, sample_size, expand_dim, batch_size)
+                break
+            except RuntimeError:
+                batch_size = batch_size // 2
+        return samples
     
     def eval_loss(self, x, y, loss_type="l2", sample_size=None, verbose=False):
         """Compute the loss for evaluation.
@@ -358,7 +410,7 @@ class Engressor(object):
             return loss.item()
         else:
             loss, loss1, loss2 = loss
-            return loss.item(), loss1.item(), loss2.item()
+            return loss.item(), loss1.item(), loss2.item()        
     
     def plot(self, x_te, y_te, x_tr=None, y_tr=None, x_idx=0, y_idx=0, 
              target="mean", sample_size=100, save_dir=None,
