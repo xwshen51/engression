@@ -112,8 +112,8 @@ class StoNet(nn.Module):
         """Point prediction.
 
         Args:
-            x (torch.Tensor): _description_
-            target (str or float or list, optional): single-valued functional to predict. float refers to the quantiles. Defaults to ["mean"].
+            x (torch.Tensor): input data
+            target (str or float or list, optional): quantities to predict. float refers to the quantiles. Defaults to ["mean"].
             sample_size (int, optional): sample sizes for each x. Defaults to 100.
 
         Returns:

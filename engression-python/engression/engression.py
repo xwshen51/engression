@@ -282,7 +282,7 @@ class Engressor(object):
                 "\n-- consider training for more epochs or adjusting hyperparameters if there is a mismatch ")
     
     def predict_onebatch(self, x, target="mean", sample_size=100):
-        """Point prediction.
+        """Point prediction for one batch of data. 
 
         Args:
             x (torch.Tensor): data of predictors.
@@ -305,6 +305,17 @@ class Engressor(object):
         return y_pred
     
     def predict_batch(self, x, target="mean", sample_size=100, batch_size=None):
+        """Point prediction with mini-batches; only used when out-of-memory.
+
+        Args:
+            x (torch.Tensor): data of predictors.
+            target (str or float or list, optional): a quantity of interest to predict. float refers to the quantiles. Defaults to "mean".
+            sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
+            batch_size (int, optional): batch size. Defaults to None.
+
+        Returns:
+            torch.Tensor or list of torch.Tensor: point predictions.
+        """
         if batch_size is not None and batch_size < x.shape[0]:
             test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
             pred = []
@@ -319,12 +330,12 @@ class Engressor(object):
         """Point prediction that adaptively adjusts the batch size according to the GPU memory.
 
         Args:
-            x (_type_): _description_
-            target (str, optional): _description_. Defaults to "mean".
-            sample_size (int, optional): _description_. Defaults to 100.
+            x (torch.Tensor): data of predictors.
+            target (str or float or list, optional): a quantity of interest to predict. float refers to the quantiles. Defaults to "mean".
+            sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
 
         Returns:
-            _type_: _description_
+            torch.Tensor or list of torch.Tensor: point predictions.
         """
         batch_size = x.shape[0]
         while True:
