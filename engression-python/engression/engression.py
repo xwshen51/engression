@@ -182,7 +182,7 @@ class Engressor(object):
             else:
                 return x, y
     
-    def unstandardize_data(self, y, x=None):
+    def unstandardize_data(self, y, x=None, expand_dim=False):
         """Transform the predictions back to the original scale, if self.standardize is True.
 
         Args:
@@ -193,7 +193,10 @@ class Engressor(object):
         """
         if x is None:
             if self.standardize:
-                return y * self.y_std + self.y_mean
+                if expand_dim:
+                    return y * self.y_std.unsqueeze(0).unsqueeze(2) + self.y_mean.unsqueeze(0).unsqueeze(2)
+                else:
+                    return y * self.y_std + self.y_mean
             else:
                 return y
         else:
@@ -302,7 +305,7 @@ class Engressor(object):
         return y_pred
     
     def predict_batch(self, x, target="mean", sample_size=100, batch_size=None):
-        if batch_size is not None or batch_size < x.shape[0]:
+        if batch_size is not None and batch_size < x.shape[0]:
             test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
             pred = []
             for (x_batch,) in test_loader:
@@ -349,12 +352,12 @@ class Engressor(object):
         x = vectorize(x)
         x = x.to(self.device)
         x = self.standardize_data(x)
-        y_samples = self.model.sample(x, sample_size, expand_dim=expand_dim)
-        y_samples = self.unstandardize_data(y_samples)
+        y_samples = self.model.sample(x, sample_size, expand_dim=expand_dim)            
+        y_samples = self.unstandardize_data(y_samples, expand_dim=expand_dim)
         return y_samples
     
     def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None):
-        if batch_size is not None or batch_size < x.shape[0]:
+        if batch_size is not None and batch_size < x.shape[0]:
             test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
             samples = []
             for (x_batch,) in test_loader:
