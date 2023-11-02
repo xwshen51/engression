@@ -107,6 +107,7 @@ class Engressor(object):
                 print("")
         self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, sigmoid, resblock).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.verbose = verbose
         
         self.tr_loss = None
             
@@ -344,6 +345,8 @@ class Engressor(object):
                 break
             except RuntimeError:
                 batch_size = batch_size // 2
+                if self.verbose:
+                    print("Out of memory; reduce the batch size to {}".format(batch_size))
         return pred
     
     def sample_onebatch(self, x, sample_size=100, expand_dim=True):
@@ -386,6 +389,8 @@ class Engressor(object):
                 break
             except RuntimeError:
                 batch_size = batch_size // 2
+                if self.verbose:
+                    print("Out of memory; reduce the batch size to {}".format(batch_size))
         return samples
     
     def eval_loss(self, x, y, loss_type="l2", sample_size=None, verbose=False):
