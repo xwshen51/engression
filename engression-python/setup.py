@@ -10,7 +10,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='engression',
-    version='0.1.7',
+    version='0.1.8',
     description='Engression Modelling',
     url='https://github.com/xwshen51/engression',
     author='Xinwei Shen and Nicolai Meinshausen',

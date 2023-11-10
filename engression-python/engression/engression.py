@@ -393,7 +393,7 @@ class Engressor(object):
                     print("Out of memory; reduce the batch size to {}".format(batch_size))
         return samples
     
-    def eval_loss(self, x, y, loss_type="l2", sample_size=None, verbose=False):
+    def eval_loss(self, x, y, loss_type="l2", sample_size=None, beta=1, verbose=False):
         """Compute the loss for evaluation.
 
         Args:
@@ -401,6 +401,7 @@ class Engressor(object):
             y (torch.Tensor): data of responses.
             loss_type (str, optional): loss type. Defaults to "l2". Choices: ["l2", "l1", "energy", "cor"].
             sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
+            beta (float, optional): beta in energy score. Defaults to 1.
         
         Returns:
             float: evaluation loss.
@@ -424,7 +425,7 @@ class Engressor(object):
         else:
             assert loss_type == "energy"
             y_samples = self.sample(x, sample_size=sample_size, expand_dim=False)
-            loss = energy_loss(y, y_samples, verbose=verbose)
+            loss = energy_loss(y, y_samples, beta=beta, verbose=verbose)
         if not verbose:
             return loss.item()
         else:

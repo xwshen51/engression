@@ -1,5 +1,7 @@
 import torch
 from .utils import vectorize
+from torch.linalg import vector_norm
+
 
 def energy_loss(x_true, x_est, beta=1, verbose=False):
     """Loss function based on the energy score.
@@ -15,7 +17,7 @@ def energy_loss(x_true, x_est, beta=1, verbose=False):
     Returns:
         loss (torch.Tensor): energy loss.
     """
-    EPS = 0 if beta.is_integer() else 1e-5
+    EPS = 0 if float(beta).is_integer() else 1e-5
     x_true = vectorize(x_true).unsqueeze(1)
     if not isinstance(x_est, list):
         x_est = list(torch.split(x_est, x_true.shape[0], dim=0))
@@ -23,7 +25,7 @@ def energy_loss(x_true, x_est, beta=1, verbose=False):
     x_est = [vectorize(x_est[i]).unsqueeze(1) for i in range(m)]
     x_est = torch.cat(x_est, dim=1)
         
-    s1 = (torch.norm(x_est - x_true, 2, dim=2) + EPS).pow(beta).mean()
+    s1 = (vector_norm(x_est - x_true, 2, dim=2) + EPS).pow(beta).mean()
     s2 = (torch.cdist(x_est, x_est, 2) + EPS).pow(beta).mean() * m / (m - 1)
     if verbose:
         return torch.cat([(s1 - s2 / 2).reshape(1), s1.reshape(1), s2.reshape(1)], dim=0)
@@ -44,20 +46,20 @@ def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=False):
     Returns:
         loss (torch.Tensor): energy loss.
     """
-    EPS = 0 if beta.is_integer() else 1e-5
+    EPS = 0 if float(beta).is_integer() else 1e-5
     x0 = vectorize(x0)
     x = vectorize(x)
     xp = vectorize(xp)
     if x0p is None:
-        s1 = (torch.norm(x - x0, 2, dim=1) + EPS).pow(beta).mean() / 2 + (torch.norm(xp - x0, 2, dim=1) + EPS).pow(beta).mean() / 2
-        s2 = (torch.norm(x - xp, 2, dim=1) + EPS).pow(beta).mean() 
+        s1 = (vector_norm(x - x0, 2, dim=1) + EPS).pow(beta).mean() / 2 + (vector_norm(xp - x0, 2, dim=1) + EPS).pow(beta).mean() / 2
+        s2 = (vector_norm(x - xp, 2, dim=1) + EPS).pow(beta).mean() 
         loss = s1 - s2/2
     else:
         x0p = vectorize(x0p)
-        s1 = ((torch.norm(x - x0, 2, dim=1) + EPS).pow(beta).mean() + (torch.norm(xp - x0, 2, dim=1) + EPS).pow(beta).mean() + 
-              (torch.norm(x - x0p, 2, dim=1) + EPS).pow(beta).mean() + (torch.norm(xp - x0p, 2, dim=1) + EPS).pow(beta).mean()) / 4
-        s2 = (torch.norm(x - xp, 2, dim=1) + EPS).pow(beta).mean() 
-        s3 = (torch.norm(x0 - x0p, 2, dim=1) + EPS).pow(beta).mean() 
+        s1 = ((vector_norm(x - x0, 2, dim=1) + EPS).pow(beta).mean() + (vector_norm(xp - x0, 2, dim=1) + EPS).pow(beta).mean() + 
+              (vector_norm(x - x0p, 2, dim=1) + EPS).pow(beta).mean() + (vector_norm(xp - x0p, 2, dim=1) + EPS).pow(beta).mean()) / 4
+        s2 = (vector_norm(x - xp, 2, dim=1) + EPS).pow(beta).mean() 
+        s3 = (vector_norm(x0 - x0p, 2, dim=1) + EPS).pow(beta).mean() 
         loss = s1 - s2/2 - s3/2
     if verbose:
         return torch.cat([loss.reshape(1), s1.reshape(1), s2.reshape(1)], dim=0)
