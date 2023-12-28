@@ -60,7 +60,7 @@ class Engressor(object):
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
         sigmoid (bool, optional): whether to add a sigmoid function at the model output. Defaults to False.
-        resblock (bool, optional): whether to use residual blocks. Defaults to False.
+        resblock (bool, optional): whether to use residual blocks (skip-connections). Defaults to False.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         beta (float, optional): power parameter in the energy loss.
         lr (float, optional): learning rate. Defaults to 0.001.
@@ -101,10 +101,11 @@ class Engressor(object):
         self.y_std = None
         
         if verbose:
-            if num_layer > 2 and resblock:
-                if num_layer % 2 != 0:
-                    print("The number of layers must be an even number for residual blocks. Added one layer.")
-                print("")
+            if num_layer > 2:
+                if resblock and num_layer % 2 != 0:
+                    print("The number of layers must be an even number for residual blocks (skip-connections); added one layer.")
+                else:
+                    print("Residual blocks (skip-connections) are typically recommended for more than 2 layers; turn it on by setting resblock=True.")
         self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, sigmoid, resblock).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.verbose = verbose

@@ -11,55 +11,88 @@ class StoLayer(nn.Module):
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
     """
-    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=True):
+    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=True, out_act=None):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
+        
         layer = [nn.Linear(in_dim + noise_dim, out_dim)]
         if add_bn:
             layer += [nn.BatchNorm1d(out_dim)]
-        layer += [nn.ReLU(inplace=True)]
         self.layer = nn.Sequential(*layer)
+        if out_act == "relu":
+            self.out_act = nn.ReLU(inplace=True)
+        elif out_act == "sigmoid":
+            self.out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
+        else:
+            self.out_act = None
     
     def forward(self, x):
         eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
-        x = torch.cat([x, eps], dim=1)
-        return self.layer(x)
+        out = torch.cat([x, eps], dim=1)
+        out = self.layer(out)
+        if self.out_act is not None:
+            out = self.out_act(out)
+        return out
 
 
 class StoResBlock(nn.Module):
     """A stochastic residual net block.
 
     Args:
-        dim (int): dimension of input and output.
-        noise_sim (int, optional): noise dimension. Defaults to 100.
+        dim (int, optional): input dimension. Defaults to 100.
+        hidden_dim (int, optional): hidden dimension (default to dim). Defaults to None.
+        out_dim (int, optional): output dimension (default to dim). Defaults to None.
+        noise_dim (int, optional): noise dimension. Defaults to 100.
+        add_bn (bool, optional): whether to add batch normalization. Defaults to True.
+        out_act (str, optional): output activation function. Defaults to None.
     """
-    def __init__(self, dim, noise_dim=100):
+    def __init__(self, dim=100, hidden_dim=None, out_dim=None, noise_dim=100, add_bn=True, out_act=None):
         super().__init__()
-        self.dim = dim
         self.noise_dim = noise_dim
-        self.fc1 = nn.Sequential(
-            nn.Linear(dim + noise_dim, dim),
-            nn.BatchNorm1d(dim),
-            nn.ReLU(inplace=True)
-        )
-        self.fc2 = nn.Sequential(
-            nn.Linear(dim + noise_dim, dim),
-            nn.BatchNorm1d(dim),
-        )
-        self.relu = nn.ReLU(inplace=True)
+        if hidden_dim is None:
+            hidden_dim = dim
+        if out_dim is None:
+            out_dim = dim
+        self.layer1 = [nn.Linear(dim + noise_dim, hidden_dim)]
+        self.add_bn = add_bn
+        if add_bn:
+            self.layer1.append(nn.BatchNorm1d(hidden_dim))
+        self.layer1.append(nn.ReLU())
+        self.layer1 = nn.Sequential(*self.layer1)
+        self.layer2 = nn.Linear(hidden_dim + noise_dim, out_dim)
+        if add_bn and out_act == "relu": # for intermediate blocks
+            self.layer2 = nn.Sequential(*[self.layer2, nn.BatchNorm1d(out_dim)])
+        if out_dim != dim:
+            self.layer3 = nn.Linear(dim, out_dim)
+        self.dim = dim
+        self.out_dim = out_dim
+        self.noise_dim = noise_dim
+        if out_act == "relu":
+            self.out_act = nn.ReLU(inplace=True)
+        elif out_act == "sigmoid":
+            self.out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
+        else:
+            self.out_act = None
 
     def forward(self, x):
-        eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
-        out = torch.cat([x, eps], dim=1)
-        out = self.fc1(out)
-        eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
-        out = torch.cat([out, eps], dim=1)
-        out = self.fc2(out)
-        out += x
-        return self.relu(out)
+        if self.noise_dim > 0:
+            eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
+            out = self.layer1(torch.cat([x, eps], dim=1))
+            eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
+            out = self.layer2(torch.cat([out, eps], dim=1))
+        else:
+            out = self.layer2(self.layer1(x))
+        if self.out_dim != self.dim:
+            out2 = self.layer3(x)
+            out = out + out2
+        else:
+            out += x
+        if self.out_act is not None:
+            out = self.out_act(out)
+        return out
     
     
 class StoNet(nn.Module):
@@ -84,29 +117,36 @@ class StoNet(nn.Module):
         self.noise_dim = noise_dim
         self.add_bn = add_bn
         self.sigmoid = sigmoid
+        out_act = "sigmoid" if sigmoid else None
         
+        self.num_blocks = None
         if resblock:
-            if num_layer <= 2:
-                # print("The number of layers must exceed 2 for additing residual blocks. Currently no residual block added.")
-                resblock = False
-            elif num_layer % 2 != 0:
+            if num_layer % 2 != 0:
                 num_layer += 1
                 # print("The number of layers must be an even number for residual blocks. Added one layer.")
-            num_blocks = (num_layer - 2) // 2
+            num_blocks = num_layer // 2
             self.num_blocks = num_blocks
         self.resblock = resblock
         self.num_layer = num_layer
         
-        self.input_layer = StoLayer(in_dim, hidden_dim, noise_dim, add_bn)
-        if resblock:
-            self.inter_layer = nn.Sequential(*[StoResBlock(hidden_dim, noise_dim)]*num_blocks)
+        if self.resblock: 
+            if self.num_blocks == 1:
+                self.net = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
+                                       noise_dim=noise_dim, add_bn=add_bn, out_act=out_act)
+            else:
+                self.input_layer = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=hidden_dim, 
+                                               noise_dim=noise_dim, add_bn=add_bn, out_act="relu")
+                self.inter_layer = nn.Sequential(*[StoResBlock(dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(self.num_blocks - 2))
+                self.out_layer = StoResBlock(dim=hidden_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
+                                             noise_dim=noise_dim, add_bn=add_bn, out_act=out_act) # output layer with concatinated noise
         else:
-            if num_layer > 2:
-                self.inter_layer = nn.Sequential(*[StoLayer(hidden_dim, hidden_dim, noise_dim, add_bn)]*(num_layer - 2))
-        self.out_layer = nn.Linear(hidden_dim, out_dim)
-        if sigmoid:
-            out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
-            self.out_layer = nn.Sequential(*[self.out_layer, out_act])
+            self.input_layer = StoLayer(in_dim=in_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")
+            self.inter_layer = nn.Sequential(*[StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(num_layer - 2))
+            # self.out_layer = StoLayer(in_dim=hidden_dim, out_dim=out_dim, noise_dim=noise_dim, add_bn=False, out_act=out_act) # output layer with concatinated noise
+            self.out_layer = nn.Linear(hidden_dim, out_dim)
+            if sigmoid:
+                out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
+                self.out_layer = nn.Sequential(*[self.out_layer, out_act])
                 
     def predict(self, x, target=["mean"], sample_size=100):
         """Point prediction.
@@ -177,11 +217,10 @@ class StoNet(nn.Module):
             # samples.reshape(-1, *samples.shape[1:-1])
         
     def forward(self, x):
-        x = self.input_layer(x)
-        if self.num_layer > 2:
-            x = self.inter_layer(x)
-        x = self.out_layer(x)
-        return x
+        if self.num_blocks == 1:
+            return self.net(x)
+        else:
+            return self.out_layer(self.inter_layer(self.input_layer(x)))
 
 
 class Net(nn.Module):
@@ -232,19 +271,19 @@ class ResMLPBlock(nn.Module):
     """
     def __init__(self, dim):
         super().__init__()
-        self.fc1 = nn.Sequential(
+        self.layer1 = nn.Sequential(
             nn.Linear(dim, dim),
             nn.BatchNorm1d(dim),
             nn.ReLU(inplace=True)
         )
-        self.fc2 = nn.Sequential(
+        self.layer2 = nn.Sequential(
             nn.Linear(dim, dim),
             nn.BatchNorm1d(dim),
         )
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        out = self.fc2(self.fc1(x))
+        out = self.layer2(self.layer1(x))
         out += x
         return self.relu(out)
 
@@ -258,24 +297,26 @@ class ResMLP(nn.Module):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
     """
-    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100):
+    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, add_bn=True, sigmoid=False):
         super().__init__()
+        out_act = "sigmoid" if sigmoid else None
         if num_layer % 2 != 0:
             num_layer += 1
             print("The number of layers must be an even number for residual blocks. Added one layer.")
-        num_blocks = (num_layer - 2) // 2
+        num_blocks = num_layer // 2
         self.num_blocks = num_blocks
-        self.in_layer = nn.Sequential(
-            nn.Linear(in_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.ReLU(inplace=True)
-        )
-        if num_blocks > 0:
-            self.inter_layer = nn.Sequential(*[ResMLPBlock(hidden_dim)]*num_blocks)
-        self.out_layer = nn.Linear(hidden_dim, out_dim)
+        if num_blocks == 1:
+            self.net = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
+                                   noise_dim=0, add_bn=add_bn, out_act=out_act)
+        else:
+            self.input_layer = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=hidden_dim, 
+                                           noise_dim=0, add_bn=add_bn, out_act="relu")
+            self.inter_layer = nn.Sequential(*[StoResBlock(dim=hidden_dim, noise_dim=0, add_bn=add_bn, out_act="relu")]*(self.num_blocks - 2))
+            self.out_layer = StoResBlock(dim=hidden_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
+                                         noise_dim=0, add_bn=add_bn, out_act=out_act)
 
     def forward(self, x):
-        out = self.in_layer(x)
-        if self.num_blocks > 0:
-            out = self.inter_layer(out)
-        return self.out_layer(out)
+        if self.num_blocks == 1:
+            return self.net(x)
+        else:
+            return self.out_layer(self.inter_layer(self.input_layer(x)))
