@@ -53,7 +53,7 @@ def check_for_gpu(device):
     Args:
         device (torch.device): current set device.
     """
-    if device == torch.device('cuda'):
+    if device.type == "cuda":
         if torch.cuda.is_available():
             print("GPU is available, running on GPU.\n")
         else:
