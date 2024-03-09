@@ -158,8 +158,8 @@ class StoNet(nn.Module):
             # self.out_layer = StoLayer(in_dim=hidden_dim, out_dim=out_dim, noise_dim=noise_dim, add_bn=False, out_act=out_act) # output layer with concatinated noise
             self.out_layer = nn.Linear(hidden_dim, out_dim)
                 
-    def predict_onebatch(self, x, target=["mean"], sample_size=100):
-        """Point prediction (for one batch of data).
+    def predict(self, x, target=["mean"], sample_size=100):
+        """Point prediction.
 
         Args:
             x (torch.Tensor): input data
@@ -196,41 +196,6 @@ class StoNet(nn.Module):
             return results[0]
         else:
             return results
-    
-    def predict_batch(self, x, target=["mean"], sample_size=100, batch_size=None):
-        """Point prediction with mini-batches; only used when out-of-memory.
-
-        Args:
-            x (torch.Tensor): input data
-            target (str or float or list, optional): quantities to predict. float refers to the quantiles. Defaults to ["mean"].
-            sample_size (int, optional): sample sizes for each x. Defaults to 100.
-            batch_size (int, optional): batch size. Defaults to None.
-
-        Returns:
-            torch.Tensor or list of torch.Tensor: point predictions
-        """
-        if batch_size is not None and batch_size < x.shape[0]:
-            test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
-            pred = []
-            for (x_batch,) in test_loader:
-                pred.append(self.predict_onebatch(x_batch, target, sample_size))
-            pred = torch.cat(pred, dim=0)
-        else:
-            pred = self.predict_onebatch(x, target, sample_size)
-        return pred
-    
-    def predict(self, x, target="mean", sample_size=100, verbose=True):
-        """Point prediction that adaptively adjusts the batch size according to the GPU memory."""
-        batch_size = x.shape[0]
-        while True:
-            try:
-                pred = self.predict_batch(x, target, sample_size, batch_size)
-                break
-            except RuntimeError:
-                batch_size = batch_size // 2
-                if verbose:
-                    print("Out of memory; reduce the batch size to {}".format(batch_size))
-        return pred        
 
     def sample_onebatch(self, x, sample_size=100, expand_dim=True):
         """Sampling new response data (for one batch of data).
@@ -262,6 +227,17 @@ class StoNet(nn.Module):
             # samples.reshape(-1, *samples.shape[1:-1])
     
     def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None):
+        """Sampling with mini-batches; only used when out-of-memory.
+
+        Args:
+            x (torch.Tensor): new data of predictors of shape [data_size, covariate_dim]
+            sample_size (int, optional): new sample size. Defaults to 100.
+            expand_dim (bool, optional): whether to expand the sample dimension. Defaults to True.
+            batch_size (int, optional): batch size. Defaults to None.
+
+        Returns:
+            torch.Tensor of shape (data_size, response_dim, sample_size) if expand_dim else (data_size*sample_size, response_dim), where response_dim could have multiple channels.
+        """
         if batch_size is not None and batch_size < x.shape[0]:
             test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
             samples = []
@@ -273,7 +249,7 @@ class StoNet(nn.Module):
         return samples
     
     def sample(self, x, sample_size=100, expand_dim=True, verbose=True):
-        """Sampling."""
+        """Sampling that adaptively adjusts the batch size according to the GPU memory."""
         batch_size = x.shape[0]
         while True:
             try:

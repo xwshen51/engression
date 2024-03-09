@@ -313,50 +313,6 @@ class Engressor(object):
             y_pred = self.unstandardize_data(y_pred)
         return y_pred
     
-    # def predict_batch(self, x, target="mean", sample_size=100, batch_size=None):
-    #     """Point prediction with mini-batches; only used when out-of-memory.
-
-    #     Args:
-    #         x (torch.Tensor): data of predictors.
-    #         target (str or float or list, optional): a quantity of interest to predict. float refers to the quantiles. Defaults to "mean".
-    #         sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
-    #         batch_size (int, optional): batch size. Defaults to None.
-
-    #     Returns:
-    #         torch.Tensor or list of torch.Tensor: point predictions.
-    #     """
-    #     if batch_size is not None and batch_size < x.shape[0]:
-    #         test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
-    #         pred = []
-    #         for (x_batch,) in test_loader:
-    #             pred.append(self.predict_onebatch(x_batch, target, sample_size))
-    #         pred = torch.cat(pred, dim=0)
-    #     else:
-    #         pred = self.predict_onebatch(x, target, sample_size)
-    #     return pred
-    
-    # def predict(self, x, target="mean", sample_size=100):
-    #     """Point prediction that adaptively adjusts the batch size according to the GPU memory.
-
-    #     Args:
-    #         x (torch.Tensor): data of predictors.
-    #         target (str or float or list, optional): a quantity of interest to predict. float refers to the quantiles. Defaults to "mean".
-    #         sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
-
-    #     Returns:
-    #         torch.Tensor or list of torch.Tensor: point predictions.
-    #     """
-    #     batch_size = x.shape[0]
-    #     while True:
-    #         try:
-    #             pred = self.predict_batch(x, target, sample_size, batch_size)
-    #             break
-    #         except RuntimeError:
-    #             batch_size = batch_size // 2
-    #             if self.verbose:
-    #                 print("Out of memory; reduce the batch size to {}".format(batch_size))
-    #     return pred
-    
     def sample(self, x, sample_size=100, expand_dim=True):
         """Sample new response data.
 
@@ -377,29 +333,6 @@ class Engressor(object):
         y_samples = self.model.sample(x, sample_size, expand_dim=expand_dim)            
         y_samples = self.unstandardize_data(y_samples, expand_dim=expand_dim)
         return y_samples
-    
-    # def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None):
-    #     if batch_size is not None and batch_size < x.shape[0]:
-    #         test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
-    #         samples = []
-    #         for (x_batch,) in test_loader:
-    #             samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim))
-    #         samples = torch.cat(samples, dim=0)
-    #     else:
-    #         samples = self.sample_onebatch(x, sample_size, expand_dim)
-    #     return samples
-    
-    # def sample(self, x, sample_size=100, expand_dim=True):
-    #     batch_size = x.shape[0]
-    #     while True:
-    #         try:
-    #             samples = self.sample_batch(x, sample_size, expand_dim, batch_size)
-    #             break
-    #         except RuntimeError:
-    #             batch_size = batch_size // 2
-    #             if self.verbose:
-    #                 print("Out of memory; reduce the batch size to {}".format(batch_size))
-    #     return samples
     
     def eval_loss(self, x, y, loss_type="l2", sample_size=None, beta=1, verbose=False):
         """Compute the loss for evaluation.
