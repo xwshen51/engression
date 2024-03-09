@@ -136,7 +136,7 @@ class StoNet(nn.Module):
         if resblock:
             if num_layer % 2 != 0:
                 num_layer += 1
-                # print("The number of layers must be an even number for residual blocks. Added one layer.")
+                print("The number of layers must be an even number for residual blocks. Changed to {}".format(str(num_layer)))
             num_blocks = num_layer // 2
             self.num_blocks = num_blocks
         self.resblock = resblock
@@ -173,6 +173,8 @@ class StoNet(nn.Module):
             
         Here we do not call `sample` but directly call `forward`.
         """
+        if self.noise_dim == 0:
+            sample_size = 1
         samples = self.sample(x=x, sample_size=sample_size, expand_dim=True)
         if not isinstance(target, list):
             target = [target]
@@ -214,7 +216,7 @@ class StoNet(nn.Module):
             x_rep = x.repeat(sample_size, 1)
             ## samples of shape (data_size*sample_size, response_dim) such that samples[data_size*(i-1):data_size*i,:] contains one sample for each data point, for i = 1, ..., sample_size
             samples = self.forward(x=x_rep).detach()
-        if not expand_dim:
+        if not expand_dim or sample_size == 1:
             return samples
         else:
             expand_dim = len(samples.shape)

@@ -106,13 +106,6 @@ class Engressor(object):
         self.y_mean = None
         self.y_std = None
         
-        if verbose:
-            if num_layer > 2:
-                if resblock:
-                    if num_layer % 2 != 0:
-                        print("The number of layers must be an even number for residual blocks (skip-connections); added one layer.")
-                else:
-                    print("Residual blocks (skip-connections) are typically recommended for more than 2 layers; turn it on by setting resblock=True.")
         self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, out_act, resblock).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.verbose = verbose
