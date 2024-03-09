@@ -197,7 +197,7 @@ class StoNet(nn.Module):
         else:
             return results
     
-    def predict_onebatch(self, x, target=["mean"], sample_size=100, batch_size=None):
+    def predict_batch(self, x, target=["mean"], sample_size=100, batch_size=None):
         """Point prediction with mini-batches; only used when out-of-memory.
 
         Args:
@@ -219,7 +219,7 @@ class StoNet(nn.Module):
             pred = self.predict_onebatch(x, target, sample_size)
         return pred
     
-    def predict(self, x, target="mean", sample_size=100):
+    def predict(self, x, target="mean", sample_size=100, verbose=True):
         """Point prediction that adaptively adjusts the batch size according to the GPU memory."""
         batch_size = x.shape[0]
         while True:
@@ -228,7 +228,7 @@ class StoNet(nn.Module):
                 break
             except RuntimeError:
                 batch_size = batch_size // 2
-                if self.verbose:
+                if verbose:
                     print("Out of memory; reduce the batch size to {}".format(batch_size))
         return pred        
 
@@ -272,7 +272,7 @@ class StoNet(nn.Module):
             samples = self.sample_onebatch(x, sample_size, expand_dim)
         return samples
     
-    def sample(self, x, sample_size=100, expand_dim=True):
+    def sample(self, x, sample_size=100, expand_dim=True, verbose=True):
         """Sampling."""
         batch_size = x.shape[0]
         while True:
@@ -281,7 +281,7 @@ class StoNet(nn.Module):
                 break
             except RuntimeError:
                 batch_size = batch_size // 2
-                if self.verbose:
+                if verbose:
                     print("Out of memory; reduce the batch size to {}".format(batch_size))
         return samples
         
