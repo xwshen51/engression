@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from .data.loader import make_dataloader
 
 
 class StoLayer(nn.Module):    
@@ -73,6 +74,10 @@ class StoResBlock(nn.Module):
         if out_act == "relu":
             self.out_act = nn.ReLU(inplace=True)
         elif out_act == "sigmoid":
+            self.out_act = nn.Sigmoid() 
+        elif out_act == "tanh":
+            self.out_act = nn.Tanh() 
+        elif out_act == "softmax":
             self.out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
         else:
             self.out_act = None
@@ -105,19 +110,27 @@ class StoNet(nn.Module):
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
-        sigmoid (bool, optional): whether to add a sigmoid function at the model output. Defaults to False.
+        out_act (str, optional): output activation function. Defaults to None.
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=True, sigmoid=False, resblock=False):
+                 noise_dim=100, add_bn=True, out_act=None, resblock=False):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
-        self.sigmoid = sigmoid
-        out_act = "sigmoid" if sigmoid else None
+        if out_act == "relu":
+            self.out_act = nn.ReLU(inplace=True)
+        elif out_act == "sigmoid":
+            self.out_act = nn.Sigmoid()
+        elif out_act == "softmax":
+            self.out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
+        elif out_act == "tanh":
+            self.out_act = nn.Tanh()
+        else:
+            self.out_act = None
         
         self.num_blocks = None
         if resblock:
@@ -144,12 +157,9 @@ class StoNet(nn.Module):
             self.inter_layer = nn.Sequential(*[StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(num_layer - 2))
             # self.out_layer = StoLayer(in_dim=hidden_dim, out_dim=out_dim, noise_dim=noise_dim, add_bn=False, out_act=out_act) # output layer with concatinated noise
             self.out_layer = nn.Linear(hidden_dim, out_dim)
-            if sigmoid:
-                out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
-                self.out_layer = nn.Sequential(*[self.out_layer, out_act])
                 
-    def predict(self, x, target=["mean"], sample_size=100):
-        """Point prediction.
+    def predict_onebatch(self, x, target=["mean"], sample_size=100):
+        """Point prediction (for one batch of data).
 
         Args:
             x (torch.Tensor): input data
@@ -187,8 +197,43 @@ class StoNet(nn.Module):
         else:
             return results
     
-    def sample(self, x, sample_size=100, expand_dim=True):
-        """Sample new response data.
+    def predict_onebatch(self, x, target=["mean"], sample_size=100, batch_size=None):
+        """Point prediction with mini-batches; only used when out-of-memory.
+
+        Args:
+            x (torch.Tensor): input data
+            target (str or float or list, optional): quantities to predict. float refers to the quantiles. Defaults to ["mean"].
+            sample_size (int, optional): sample sizes for each x. Defaults to 100.
+            batch_size (int, optional): batch size. Defaults to None.
+
+        Returns:
+            torch.Tensor or list of torch.Tensor: point predictions
+        """
+        if batch_size is not None and batch_size < x.shape[0]:
+            test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
+            pred = []
+            for (x_batch,) in test_loader:
+                pred.append(self.predict_onebatch(x_batch, target, sample_size))
+            pred = torch.cat(pred, dim=0)
+        else:
+            pred = self.predict_onebatch(x, target, sample_size)
+        return pred
+    
+    def predict(self, x, target="mean", sample_size=100):
+        """Point prediction that adaptively adjusts the batch size according to the GPU memory."""
+        batch_size = x.shape[0]
+        while True:
+            try:
+                pred = self.predict_batch(x, target, sample_size, batch_size)
+                break
+            except RuntimeError:
+                batch_size = batch_size // 2
+                if self.verbose:
+                    print("Out of memory; reduce the batch size to {}".format(batch_size))
+        return pred        
+
+    def sample_onebatch(self, x, sample_size=100, expand_dim=True):
+        """Sampling new response data (for one batch of data).
 
         Args:
             x (torch.Tensor): new data of predictors of shape [data_size, covariate_dim]
@@ -215,6 +260,30 @@ class StoNet(nn.Module):
             return samples
             # without expanding dimensions:
             # samples.reshape(-1, *samples.shape[1:-1])
+    
+    def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None):
+        if batch_size is not None and batch_size < x.shape[0]:
+            test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
+            samples = []
+            for (x_batch,) in test_loader:
+                samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim))
+            samples = torch.cat(samples, dim=0)
+        else:
+            samples = self.sample_onebatch(x, sample_size, expand_dim)
+        return samples
+    
+    def sample(self, x, sample_size=100, expand_dim=True):
+        """Sampling."""
+        batch_size = x.shape[0]
+        while True:
+            try:
+                samples = self.sample_batch(x, sample_size, expand_dim, batch_size)
+                break
+            except RuntimeError:
+                batch_size = batch_size // 2
+                if self.verbose:
+                    print("Out of memory; reduce the batch size to {}".format(batch_size))
+        return samples
         
     def forward(self, x):
         if self.num_blocks == 1:
@@ -317,6 +386,9 @@ class ResMLP(nn.Module):
 
     def forward(self, x):
         if self.num_blocks == 1:
-            return self.net(x)
+            out = self.net(x)
         else:
-            return self.out_layer(self.inter_layer(self.input_layer(x)))
+            out = self.out_layer(self.inter_layer(self.input_layer(x)))
+        if self.out_act is not None:
+            out = self.out_act(out)
+        return out

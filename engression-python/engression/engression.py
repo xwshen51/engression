@@ -7,10 +7,10 @@ from .data.loader import make_dataloader
 from .utils import *
 
 
-def engression(x, y, sigmoid=False,
-               num_layer=2, hidden_dim=100, noise_dim=100, 
+def engression(x, y, classification=False,
+               num_layer=2, hidden_dim=100, noise_dim=100, out_act=None,
                add_bn=True, resblock=False, beta=1,
-               lr=0.001, num_epoches=500, batch_size=None, 
+               lr=0.0001, num_epoches=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
                device="cpu", standardize=True, verbose=True): 
     """This function fits an engression model to the data. It allows multivariate predictors and response variables. Variables are per default internally standardized (training with standardized data, while predictions and evaluations are on original scale).
@@ -18,14 +18,15 @@ def engression(x, y, sigmoid=False,
     Args:
         x (torch.Tensor): training data of predictors.
         y (torch.Tensor): training data of responses.
-        sigmoid (bool, optional): whether to add a sigmoid function at the model output.
+        classification (bool, optional): classification or not.
         num_layer (int, optional): number of (linear) layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
+        out_act (str, optional): output activation function. Defaults to None.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         resblock (bool, optional): whether to use residual blocks (skip connections). Defaults to False.
         beta (float, optional): power parameter in the energy loss.
-        lr (float, optional): learning rate. Defaults to 0.001.
+        lr (float, optional): learning rate. Defaults to 0.0001.
         num_epoches (int, optional): number of epochs. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None.
         print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
@@ -39,9 +40,9 @@ def engression(x, y, sigmoid=False,
     """
     if x.shape[0] != y.shape[0]:
         raise Exception("The sample sizes for the covariates and response do not match. Please check.")
-    engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], 
+    engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], classification=classification, 
                           num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
-                          sigmoid=sigmoid, resblock=resblock, add_bn=add_bn, beta=beta,
+                          out_act=out_act, resblock=resblock, add_bn=add_bn, beta=beta,
                           lr=lr, num_epoches=num_epoches, batch_size=batch_size, 
                           standardize=standardize, device=device, check_device=verbose, verbose=verbose)
     engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
@@ -56,14 +57,15 @@ class Engressor(object):
     Args:
         in_dim (int): input dimension
         out_dim (int): output dimension
+        classification (bool, optional): classification or not.
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
-        sigmoid (bool, optional): whether to add a sigmoid function at the model output. Defaults to False.
+        out_act (str, optional): output activation function. Defaults to None.
         resblock (bool, optional): whether to use residual blocks (skip-connections). Defaults to False.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         beta (float, optional): power parameter in the energy loss.
-        lr (float, optional): learning rate. Defaults to 0.001.
+        lr (float, optional): learning rate. Defaults to 0.0001.
         num_epoches (int, optional): number of epoches. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
         standardize (bool, optional): whether to standardize data during training. Defaults to True.
@@ -71,15 +73,19 @@ class Engressor(object):
         check_device (bool, optional): whether to check the device. Defaults to True.
     """
     def __init__(self, 
-                 in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100, 
-                 sigmoid=False, resblock=False, add_bn=True, beta=1,
-                 lr=0.001, num_epoches=500, batch_size=None, standardize=True, 
+                 in_dim, out_dim, classification=False,
+                 num_layer=2, hidden_dim=100, noise_dim=100, 
+                 out_act=False, resblock=False, add_bn=True, beta=1,
+                 lr=0.0001, num_epoches=500, batch_size=None, standardize=True, 
                  device="cpu", check_device=True, verbose=True): 
         super().__init__()
+        self.classification = classification
+        if classification:
+            out_act = "softmax"
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
-        self.sigmoid = sigmoid
+        self.out_act = out_act
         self.resblock = resblock
         self.add_bn = add_bn
         self.beta = beta
@@ -102,11 +108,12 @@ class Engressor(object):
         
         if verbose:
             if num_layer > 2:
-                if resblock and num_layer % 2 != 0:
-                    print("The number of layers must be an even number for residual blocks (skip-connections); added one layer.")
+                if resblock:
+                    if num_layer % 2 != 0:
+                        print("The number of layers must be an even number for residual blocks (skip-connections); added one layer.")
                 else:
                     print("Residual blocks (skip-connections) are typically recommended for more than 2 layers; turn it on by setting resblock=True.")
-        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, sigmoid, resblock).to(self.device)
+        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, out_act, resblock).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.verbose = verbose
         
@@ -148,7 +155,7 @@ class Engressor(object):
         self.x_mean = torch.mean(x, dim=0)
         self.x_std = torch.std(x, dim=0)
         self.x_std[self.x_std == 0] += 1e-5
-        if not self.sigmoid:
+        if not self.classification:
             self.y_mean = torch.mean(y, dim=0)
             self.y_std = torch.std(y, dim=0)
             self.y_std[self.y_std == 0] += 1e-5
@@ -207,14 +214,14 @@ class Engressor(object):
             else:
                 return x, y
         
-    def train(self, x, y, num_epoches=None, batch_size=512, print_every_nepoch=100, print_times_per_epoch=1, standardize=True, verbose=True):
+    def train(self, x, y, num_epoches=None, batch_size=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=True, verbose=True):
         """Fit the model.
 
         Args:
             x (torch.Tensor): training data of predictors.
             y (torch.Tensor): trainging data of responses.
             num_epoches (int, optional): number of training epochs. Defaults to None.
-            batch_size (int, optional): batch size for mini-batch SGD. Defaults to 512.
+            batch_size (int, optional): batch size for mini-batch SGD. Defaults to None.
             print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
             print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
             standardize (bool, optional): whether to standardize the data. Defaults to True.
@@ -283,8 +290,8 @@ class Engressor(object):
             print("\nPrediction-loss E(|Y-Yhat|) and variance-loss E(|Yhat-Yhat'|) should ideally be equally large" +
                 "\n-- consider training for more epochs or adjusting hyperparameters if there is a mismatch ")
     
-    def predict_onebatch(self, x, target="mean", sample_size=100):
-        """Point prediction for one batch of data. 
+    def predict(self, x, target="mean", sample_size=100):
+        """Point prediction. 
 
         Args:
             x (torch.Tensor): data of predictors.
@@ -306,51 +313,51 @@ class Engressor(object):
             y_pred = self.unstandardize_data(y_pred)
         return y_pred
     
-    def predict_batch(self, x, target="mean", sample_size=100, batch_size=None):
-        """Point prediction with mini-batches; only used when out-of-memory.
+    # def predict_batch(self, x, target="mean", sample_size=100, batch_size=None):
+    #     """Point prediction with mini-batches; only used when out-of-memory.
 
-        Args:
-            x (torch.Tensor): data of predictors.
-            target (str or float or list, optional): a quantity of interest to predict. float refers to the quantiles. Defaults to "mean".
-            sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
-            batch_size (int, optional): batch size. Defaults to None.
+    #     Args:
+    #         x (torch.Tensor): data of predictors.
+    #         target (str or float or list, optional): a quantity of interest to predict. float refers to the quantiles. Defaults to "mean".
+    #         sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
+    #         batch_size (int, optional): batch size. Defaults to None.
 
-        Returns:
-            torch.Tensor or list of torch.Tensor: point predictions.
-        """
-        if batch_size is not None and batch_size < x.shape[0]:
-            test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
-            pred = []
-            for (x_batch,) in test_loader:
-                pred.append(self.predict_onebatch(x_batch, target, sample_size))
-            pred = torch.cat(pred, dim=0)
-        else:
-            pred = self.predict_onebatch(x, target, sample_size)
-        return pred
+    #     Returns:
+    #         torch.Tensor or list of torch.Tensor: point predictions.
+    #     """
+    #     if batch_size is not None and batch_size < x.shape[0]:
+    #         test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
+    #         pred = []
+    #         for (x_batch,) in test_loader:
+    #             pred.append(self.predict_onebatch(x_batch, target, sample_size))
+    #         pred = torch.cat(pred, dim=0)
+    #     else:
+    #         pred = self.predict_onebatch(x, target, sample_size)
+    #     return pred
     
-    def predict(self, x, target="mean", sample_size=100):
-        """Point prediction that adaptively adjusts the batch size according to the GPU memory.
+    # def predict(self, x, target="mean", sample_size=100):
+    #     """Point prediction that adaptively adjusts the batch size according to the GPU memory.
 
-        Args:
-            x (torch.Tensor): data of predictors.
-            target (str or float or list, optional): a quantity of interest to predict. float refers to the quantiles. Defaults to "mean".
-            sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
+    #     Args:
+    #         x (torch.Tensor): data of predictors.
+    #         target (str or float or list, optional): a quantity of interest to predict. float refers to the quantiles. Defaults to "mean".
+    #         sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
 
-        Returns:
-            torch.Tensor or list of torch.Tensor: point predictions.
-        """
-        batch_size = x.shape[0]
-        while True:
-            try:
-                pred = self.predict_batch(x, target, sample_size, batch_size)
-                break
-            except RuntimeError:
-                batch_size = batch_size // 2
-                if self.verbose:
-                    print("Out of memory; reduce the batch size to {}".format(batch_size))
-        return pred
+    #     Returns:
+    #         torch.Tensor or list of torch.Tensor: point predictions.
+    #     """
+    #     batch_size = x.shape[0]
+    #     while True:
+    #         try:
+    #             pred = self.predict_batch(x, target, sample_size, batch_size)
+    #             break
+    #         except RuntimeError:
+    #             batch_size = batch_size // 2
+    #             if self.verbose:
+    #                 print("Out of memory; reduce the batch size to {}".format(batch_size))
+    #     return pred
     
-    def sample_onebatch(self, x, sample_size=100, expand_dim=True):
+    def sample(self, x, sample_size=100, expand_dim=True):
         """Sample new response data.
 
         Args:
@@ -371,28 +378,28 @@ class Engressor(object):
         y_samples = self.unstandardize_data(y_samples, expand_dim=expand_dim)
         return y_samples
     
-    def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None):
-        if batch_size is not None and batch_size < x.shape[0]:
-            test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
-            samples = []
-            for (x_batch,) in test_loader:
-                samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim))
-            samples = torch.cat(samples, dim=0)
-        else:
-            samples = self.sample_onebatch(x, sample_size, expand_dim)
-        return samples
+    # def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None):
+    #     if batch_size is not None and batch_size < x.shape[0]:
+    #         test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
+    #         samples = []
+    #         for (x_batch,) in test_loader:
+    #             samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim))
+    #         samples = torch.cat(samples, dim=0)
+    #     else:
+    #         samples = self.sample_onebatch(x, sample_size, expand_dim)
+    #     return samples
     
-    def sample(self, x, sample_size=100, expand_dim=True):
-        batch_size = x.shape[0]
-        while True:
-            try:
-                samples = self.sample_batch(x, sample_size, expand_dim, batch_size)
-                break
-            except RuntimeError:
-                batch_size = batch_size // 2
-                if self.verbose:
-                    print("Out of memory; reduce the batch size to {}".format(batch_size))
-        return samples
+    # def sample(self, x, sample_size=100, expand_dim=True):
+    #     batch_size = x.shape[0]
+    #     while True:
+    #         try:
+    #             samples = self.sample_batch(x, sample_size, expand_dim, batch_size)
+    #             break
+    #         except RuntimeError:
+    #             batch_size = batch_size // 2
+    #             if self.verbose:
+    #                 print("Out of memory; reduce the batch size to {}".format(batch_size))
+    #     return samples
     
     def eval_loss(self, x, y, loss_type="l2", sample_size=None, beta=1, verbose=False):
         """Compute the loss for evaluation.
