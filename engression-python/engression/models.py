@@ -158,7 +158,7 @@ class StoNet(nn.Module):
             # self.out_layer = StoLayer(in_dim=hidden_dim, out_dim=out_dim, noise_dim=noise_dim, add_bn=False, out_act=out_act) # output layer with concatinated noise
             self.out_layer = nn.Linear(hidden_dim, out_dim)
             if self.out_act is not None:
-                self.out_layer = nn.Sequential(*[self.out_layer, self.out_layer])
+                self.out_layer = nn.Sequential(*[self.out_layer, self.out_act])
             
     def predict(self, x, target=["mean"], sample_size=100):
         """Point prediction.
