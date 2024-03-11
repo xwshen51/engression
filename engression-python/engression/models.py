@@ -157,7 +157,9 @@ class StoNet(nn.Module):
             self.inter_layer = nn.Sequential(*[StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(num_layer - 2))
             # self.out_layer = StoLayer(in_dim=hidden_dim, out_dim=out_dim, noise_dim=noise_dim, add_bn=False, out_act=out_act) # output layer with concatinated noise
             self.out_layer = nn.Linear(hidden_dim, out_dim)
-                
+            if self.out_act is not None:
+                self.out_layer = nn.Sequential(*[self.out_layer, self.out_layer])
+            
     def predict(self, x, target=["mean"], sample_size=100):
         """Point prediction.
 
@@ -364,9 +366,6 @@ class ResMLP(nn.Module):
 
     def forward(self, x):
         if self.num_blocks == 1:
-            out = self.net(x)
+            return self.net(x)
         else:
-            out = self.out_layer(self.inter_layer(self.input_layer(x)))
-        if self.out_act is not None:
-            out = self.out_act(out)
-        return out
+            return self.out_layer(self.inter_layer(self.input_layer(x)))
