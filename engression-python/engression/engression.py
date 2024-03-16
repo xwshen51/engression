@@ -10,7 +10,7 @@ from .utils import *
 def engression(x, y, classification=False,
                num_layer=2, hidden_dim=100, noise_dim=100, out_act=None,
                add_bn=True, resblock=False, beta=1,
-               lr=0.0001, num_epoches=500, batch_size=None, 
+               lr=0.0001, num_epochs=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
                device="cpu", standardize=True, verbose=True): 
     """This function fits an engression model to the data. It allows multivariate predictors and response variables. Variables are per default internally standardized (training with standardized data, while predictions and evaluations are on original scale).
@@ -27,7 +27,7 @@ def engression(x, y, classification=False,
         resblock (bool, optional): whether to use residual blocks (skip connections). Defaults to False.
         beta (float, optional): power parameter in the energy loss.
         lr (float, optional): learning rate. Defaults to 0.0001.
-        num_epoches (int, optional): number of epochs. Defaults to 500.
+        num_epochs (int, optional): number of epochs. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None.
         print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
         print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
@@ -43,9 +43,9 @@ def engression(x, y, classification=False,
     engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], classification=classification, 
                           num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
                           out_act=out_act, resblock=resblock, add_bn=add_bn, beta=beta,
-                          lr=lr, num_epoches=num_epoches, batch_size=batch_size, 
+                          lr=lr, num_epochs=num_epochs, batch_size=batch_size, 
                           standardize=standardize, device=device, check_device=verbose, verbose=verbose)
-    engressor.train(x, y, num_epoches=num_epoches, batch_size=batch_size, 
+    engressor.train(x, y, num_epochs=num_epochs, batch_size=batch_size, 
                     print_every_nepoch=print_every_nepoch, print_times_per_epoch=print_times_per_epoch, 
                     standardize=standardize, verbose=verbose)
     return engressor
@@ -66,7 +66,7 @@ class Engressor(object):
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         beta (float, optional): power parameter in the energy loss.
         lr (float, optional): learning rate. Defaults to 0.0001.
-        num_epoches (int, optional): number of epoches. Defaults to 500.
+        num_epochs (int, optional): number of epochs. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
         standardize (bool, optional): whether to standardize data during training. Defaults to True.
         device (str or torch.device, optional): device. Defaults to "cpu". Choices = ["cpu", "gpu", "cuda"].
@@ -76,7 +76,7 @@ class Engressor(object):
                  in_dim, out_dim, classification=False,
                  num_layer=2, hidden_dim=100, noise_dim=100, 
                  out_act=False, resblock=False, add_bn=True, beta=1,
-                 lr=0.0001, num_epoches=500, batch_size=None, standardize=True, 
+                 lr=0.0001, num_epochs=500, batch_size=None, standardize=True, 
                  device="cpu", check_device=True, verbose=True): 
         super().__init__()
         self.classification = classification
@@ -90,7 +90,7 @@ class Engressor(object):
         self.add_bn = add_bn
         self.beta = beta
         self.lr = lr
-        self.num_epoches = num_epoches
+        self.num_epochs = num_epochs
         self.batch_size = batch_size
         if isinstance(device, str):
             if device == "gpu" or device == "cuda":
@@ -125,7 +125,7 @@ class Engressor(object):
               "\t hidden dimensions: {}\n".format(self.hidden_dim) +
               "\t noise dimensions: {}\n".format(self.noise_dim) +
               "\t residual blocks: {}\n".format(self.resblock) +
-              "\t number of epochs: {}\n".format(self.num_epoches) +
+              "\t number of epochs: {}\n".format(self.num_epochs) +
               "\t batch size: {}\n".format(self.batch_size) +
               "\t learning rate: {}\n".format(self.lr) +
               "\t standardization: {}\n".format(self.standardize) +
@@ -207,13 +207,13 @@ class Engressor(object):
             else:
                 return x, y
         
-    def train(self, x, y, num_epoches=None, batch_size=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=True, verbose=True):
+    def train(self, x, y, num_epochs=None, batch_size=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=True, verbose=True):
         """Fit the model.
 
         Args:
             x (torch.Tensor): training data of predictors.
             y (torch.Tensor): trainging data of responses.
-            num_epoches (int, optional): number of training epochs. Defaults to None.
+            num_epochs (int, optional): number of training epochs. Defaults to None.
             batch_size (int, optional): batch size for mini-batch SGD. Defaults to None.
             print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
             print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
@@ -221,8 +221,8 @@ class Engressor(object):
             verbose (bool, optional): whether to print losses and info. Defaults to True.
         """
         self.train_mode()
-        if num_epoches is None:
-            num_epoches = self.num_epoches
+        if num_epochs is None:
+            num_epochs = self.num_epochs
         if batch_size is None:
             batch_size = self.batch_size if self.batch_size is not None else x.size(0)
         if standardize:
@@ -242,7 +242,7 @@ class Engressor(object):
             if verbose:
                 print("Batch is larger than half of the sample size. Training based on full-batch gradient descent.")
             self.batch_size = x.size(0)
-            for epoch_idx in range(num_epoches):
+            for epoch_idx in range(num_epochs):
                 self.model.zero_grad()
                 y_sample1 = self.model(x)
                 y_sample2 = self.model(x)
@@ -251,12 +251,12 @@ class Engressor(object):
                 self.optimizer.step()
                 if (epoch_idx == 0 or  (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                     print("[Epoch {} ({:.0f}%)] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
-                        epoch_idx + 1, 100 * epoch_idx / num_epoches, loss.item(), loss1.item(), loss2.item()))
+                        epoch_idx + 1, 100 * epoch_idx / num_epochs, loss.item(), loss1.item(), loss2.item()))
         else:
             train_loader = make_dataloader(x, y, batch_size=batch_size, shuffle=True)
             if verbose:
                 print("Training based on mini-batch gradient descent with a batch size of {}.".format(batch_size))
-            for epoch_idx in range(num_epoches):
+            for epoch_idx in range(num_epochs):
                 for batch_idx, (x_batch, y_batch) in enumerate(train_loader):
                     self.model.zero_grad()
                     y_sample1 = self.model(x_batch)
@@ -267,7 +267,7 @@ class Engressor(object):
                     if (epoch_idx == 0 or (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                         if (batch_idx + 1) % (len(train_loader) // print_times_per_epoch) == 0:
                             print("[Epoch {} ({:.0f}%), batch {}] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
-                                epoch_idx + 1, 100 * epoch_idx / num_epoches, batch_idx + 1, loss.item(), loss1.item(), loss2.item()))
+                                epoch_idx + 1, 100 * epoch_idx / num_epochs, batch_idx + 1, loss.item(), loss1.item(), loss2.item()))
 
         # Evaluate performance on the training data (on the original scale)
         self.model.eval()
