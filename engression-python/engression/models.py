@@ -12,12 +12,13 @@ class StoLayer(nn.Module):
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
     """
-    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=True, out_act=None):
+    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=True, out_act=None, noise_std=1):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
+        self.noise_std = noise_std
         
         layer = [nn.Linear(in_dim + noise_dim, out_dim)]
         if add_bn:
@@ -31,7 +32,7 @@ class StoLayer(nn.Module):
             self.out_act = None
     
     def forward(self, x):
-        eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
+        eps = torch.randn(x.size(0), self.noise_dim, device=x.device) * self.noise_std
         out = torch.cat([x, eps], dim=1)
         out = self.layer(out)
         if self.out_act is not None:
@@ -50,9 +51,10 @@ class StoResBlock(nn.Module):
         add_bn (bool, optional): whether to add batch normalization. Defaults to True.
         out_act (str, optional): output activation function. Defaults to None.
     """
-    def __init__(self, dim=100, hidden_dim=None, out_dim=None, noise_dim=100, add_bn=True, out_act=None):
+    def __init__(self, dim=100, hidden_dim=None, out_dim=None, noise_dim=100, add_bn=True, out_act=None, noise_std=1):
         super().__init__()
         self.noise_dim = noise_dim
+        self.noise_std = noise_std
         if hidden_dim is None:
             hidden_dim = dim
         if out_dim is None:
@@ -84,9 +86,9 @@ class StoResBlock(nn.Module):
 
     def forward(self, x):
         if self.noise_dim > 0:
-            eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
+            eps = torch.randn(x.size(0), self.noise_dim, device=x.device) * self.noise_std
             out = self.layer1(torch.cat([x, eps], dim=1))
-            eps = torch.randn(x.size(0), self.noise_dim, device=x.device)
+            eps = torch.randn(x.size(0), self.noise_dim, device=x.device) * self.noise_std
             out = self.layer2(torch.cat([out, eps], dim=1))
         else:
             out = self.layer2(self.layer1(x))
@@ -114,13 +116,14 @@ class StoNet(nn.Module):
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=True, out_act=None, resblock=False):
+                 noise_dim=100, add_bn=True, out_act=None, resblock=False, noise_std=1):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
+        self.noise_std = noise_std
         if out_act == "relu":
             self.out_act = nn.ReLU(inplace=True)
         elif out_act == "sigmoid":
@@ -145,16 +148,16 @@ class StoNet(nn.Module):
         if self.resblock: 
             if self.num_blocks == 1:
                 self.net = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
-                                       noise_dim=noise_dim, add_bn=add_bn, out_act=out_act)
+                                       noise_dim=noise_dim, add_bn=add_bn, out_act=out_act, noise_std=noise_std)
             else:
                 self.input_layer = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=hidden_dim, 
-                                               noise_dim=noise_dim, add_bn=add_bn, out_act="relu")
+                                               noise_dim=noise_dim, add_bn=add_bn, out_act="relu", noise_std=noise_std)
                 self.inter_layer = nn.Sequential(*[StoResBlock(dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(self.num_blocks - 2))
                 self.out_layer = StoResBlock(dim=hidden_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
-                                             noise_dim=noise_dim, add_bn=add_bn, out_act=out_act) # output layer with concatinated noise
+                                             noise_dim=noise_dim, add_bn=add_bn, out_act=out_act, noise_std=noise_std) # output layer with concatinated noise
         else:
-            self.input_layer = StoLayer(in_dim=in_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")
-            self.inter_layer = nn.Sequential(*[StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(num_layer - 2))
+            self.input_layer = StoLayer(in_dim=in_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu", noise_std=noise_std)
+            self.inter_layer = nn.Sequential(*[StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu", noise_std=noise_std)]*(num_layer - 2))
             # self.out_layer = StoLayer(in_dim=hidden_dim, out_dim=out_dim, noise_dim=noise_dim, add_bn=False, out_act=out_act) # output layer with concatinated noise
             self.out_layer = nn.Linear(hidden_dim, out_dim)
             if self.out_act is not None:
