@@ -257,6 +257,9 @@ class Engressor(object):
             if verbose:
                 print("Training based on mini-batch gradient descent with a batch size of {}.".format(batch_size))
             for epoch_idx in range(num_epochs):
+                tr_loss = 0
+                tr_loss1 = 0
+                tr_loss2 = 0
                 for batch_idx, (x_batch, y_batch) in enumerate(train_loader):
                     self.model.zero_grad()
                     y_sample1 = self.model(x_batch)
@@ -264,10 +267,14 @@ class Engressor(object):
                     loss, loss1, loss2 = energy_loss_two_sample(y_batch, y_sample1, y_sample2, beta=self.beta, verbose=True)
                     loss.backward()
                     self.optimizer.step()
+                    tr_loss += loss.item()
+                    tr_loss1 += loss1.item()
+                    tr_loss2 += loss2.item()
                     if (epoch_idx == 0 or (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
-                        if (batch_idx + 1) % (len(train_loader) // print_times_per_epoch) == 0:
+                        if (batch_idx + 1) % ((len(train_loader) - 1) // print_times_per_epoch) == 0:
                             print("[Epoch {} ({:.0f}%), batch {}] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
-                                epoch_idx + 1, 100 * epoch_idx / num_epochs, batch_idx + 1, loss.item(), loss1.item(), loss2.item()))
+                                epoch_idx + 1, 100 * epoch_idx / num_epochs, batch_idx + 1, 
+                                tr_loss / (batch_idx + 1), tr_loss1 / (batch_idx + 1), tr_loss2 / (batch_idx + 1)))
 
         # Evaluate performance on the training data (on the original scale)
         self.model.eval()
