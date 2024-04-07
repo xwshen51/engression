@@ -207,7 +207,7 @@ class Engressor(object):
             else:
                 return x, y
         
-    def train(self, x, y, num_epochs=None, batch_size=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=True, verbose=True):
+    def train(self, x, y, num_epochs=None, batch_size=None, lr=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=None, verbose=True):
         """Fit the model.
 
         Args:
@@ -215,17 +215,22 @@ class Engressor(object):
             y (torch.Tensor): trainging data of responses.
             num_epochs (int, optional): number of training epochs. Defaults to None.
             batch_size (int, optional): batch size for mini-batch SGD. Defaults to None.
+            lr
             print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
             print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
             standardize (bool, optional): whether to standardize the data. Defaults to True.
             verbose (bool, optional): whether to print losses and info. Defaults to True.
         """
         self.train_mode()
-        if num_epochs is None:
-            num_epochs = self.num_epochs
+        if num_epochs is not None:
+            self.num_epochs = num_epochs
         if batch_size is None:
             batch_size = self.batch_size if self.batch_size is not None else x.size(0)
-        if standardize:
+        if lr is not None:
+            if lr != self.lr:
+                self.lr = lr
+                self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        if standardize is not None:
             self.standardize = standardize
             
         x = vectorize(x)
@@ -242,7 +247,7 @@ class Engressor(object):
             if verbose:
                 print("Batch is larger than half of the sample size. Training based on full-batch gradient descent.")
             self.batch_size = x.size(0)
-            for epoch_idx in range(num_epochs):
+            for epoch_idx in range(self.num_epochs):
                 self.model.zero_grad()
                 y_sample1 = self.model(x)
                 y_sample2 = self.model(x)
@@ -256,25 +261,25 @@ class Engressor(object):
             train_loader = make_dataloader(x, y, batch_size=batch_size, shuffle=True)
             if verbose:
                 print("Training based on mini-batch gradient descent with a batch size of {}.".format(batch_size))
-            for epoch_idx in range(num_epochs):
-                tr_loss = 0
-                tr_loss1 = 0
-                tr_loss2 = 0
+            for epoch_idx in range(self.num_epochs):
+                self.zero_loss()
                 for batch_idx, (x_batch, y_batch) in enumerate(train_loader):
-                    self.model.zero_grad()
-                    y_sample1 = self.model(x_batch)
-                    y_sample2 = self.model(x_batch)
-                    loss, loss1, loss2 = energy_loss_two_sample(y_batch, y_sample1, y_sample2, beta=self.beta, verbose=True)
-                    loss.backward()
-                    self.optimizer.step()
-                    tr_loss += loss.item()
-                    tr_loss1 += loss1.item()
-                    tr_loss2 += loss2.item()
+                    self.train_one_iter(x_batch, y_batch)
+                    # self.model.zero_grad()
+                    # y_sample1 = self.model(x_batch)
+                    # y_sample2 = self.model(x_batch)
+                    # loss, loss1, loss2 = energy_loss_two_sample(y_batch, y_sample1, y_sample2, beta=self.beta, verbose=True)
+                    # loss.backward()
+                    # self.optimizer.step()
+                    # self.tr_loss += loss.item()
+                    # self.tr_loss1 += loss1.item()
+                    # self.tr_loss2 += loss2.item()
                     if (epoch_idx == 0 or (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                         if (batch_idx + 1) % ((len(train_loader) - 1) // print_times_per_epoch) == 0:
-                            print("[Epoch {} ({:.0f}%), batch {}] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
-                                epoch_idx + 1, 100 * epoch_idx / num_epochs, batch_idx + 1, 
-                                tr_loss / (batch_idx + 1), tr_loss1 / (batch_idx + 1), tr_loss2 / (batch_idx + 1)))
+                            self.print_loss(epoch_idx, batch_idx)
+                            # print("[Epoch {} ({:.0f}%), batch {}] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
+                            #     epoch_idx + 1, 100 * epoch_idx / num_epochs, batch_idx + 1, 
+                            #     self.tr_loss / (batch_idx + 1), self.tr_loss1 / (batch_idx + 1), self.tr_loss2 / (batch_idx + 1)))
 
         # Evaluate performance on the training data (on the original scale)
         self.model.eval()
@@ -289,6 +294,31 @@ class Engressor(object):
         if verbose:
             print("\nPrediction-loss E(|Y-Yhat|) and variance-loss E(|Yhat-Yhat'|) should ideally be equally large" +
                 "\n-- consider training for more epochs or adjusting hyperparameters if there is a mismatch ")
+    
+    def zero_loss(self):
+        self.tr_loss = 0
+        self.tr_loss1 = 0
+        self.tr_loss2 = 0
+    
+    def train_one_iter(self, x_batch, y_batch):
+        self.model.zero_grad()
+        y_sample1 = self.model(x_batch)
+        y_sample2 = self.model(x_batch)
+        loss, loss1, loss2 = energy_loss_two_sample(y_batch, y_sample1, y_sample2, beta=self.beta, verbose=True)
+        loss.backward()
+        self.optimizer.step()
+        self.tr_loss += loss.item()
+        self.tr_loss1 += loss1.item()
+        self.tr_loss2 += loss2.item()
+        
+    def print_loss(self, epoch_idx, batch_idx, return_loss=False):
+        loss_str = "[Epoch {} ({:.0f}%), batch {}] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
+            epoch_idx + 1, 100 * epoch_idx / self.num_epochs, batch_idx + 1, 
+            self.tr_loss / (batch_idx + 1), self.tr_loss1 / (batch_idx + 1), self.tr_loss2 / (batch_idx + 1))
+        if return_loss:
+            return loss_str
+        else:
+            print(loss_str)
     
     def predict(self, x, target="mean", sample_size=100):
         """Point prediction. 
