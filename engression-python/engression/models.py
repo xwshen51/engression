@@ -114,14 +114,11 @@ class FiLMBlock(nn.Module):
             self.net = StoLayer(in_dim, out_dim, noise_dim, add_bn, out_act)
         else:
             self.net = StoResBlock(in_dim, hidden_dim, out_dim, noise_dim, add_bn, out_act)
-        self.out_act = get_act_func(out_act)
         
     def forward(self, x, condition):
         gamma, beta = self.condition_layer(condition).chunk(2, dim=1)         
         out = self.net(x)
         out = gamma * out + beta
-        if self.out_act is not None:
-            out = self.out_act(out)
         return out
 
 
@@ -316,16 +313,17 @@ class CondStoNet(StoNetBase):
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         out_act (str, optional): output activation function. Defaults to None.
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
+        condition_dim
     """
-    def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=True, out_act=None, resblock=False, condition_dim=0):
+    def __init__(self, in_dim, out_dim, condition_dim, num_layer=2, hidden_dim=100, 
+                 noise_dim=100, add_bn=False, out_act=None, resblock=False):
         super().__init__(noise_dim)
         self.in_dim = in_dim
         self.out_dim = out_dim
+        self.condition_dim = condition_dim
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
-        self.condition_dim = condition_dim
         
         self.num_blocks = None
         if resblock:
@@ -339,7 +337,7 @@ class CondStoNet(StoNetBase):
         if resblock:
             num_layer = self.num_blocks
         if self.num_blocks == 1:
-            self.net = FiLMBlock(in_dim=in_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu")
+            self.net = nn.ModuleList([FiLMBlock(in_dim=in_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu")])
         else:
             layers = [FiLMBlock(in_dim=in_dim, out_dim=hidden_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu")]
             for i in range(num_layer - 2):
