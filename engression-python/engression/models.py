@@ -337,7 +337,7 @@ class CondStoNet(StoNetBase):
         if resblock:
             num_layer = self.num_blocks
         if self.num_blocks == 1:
-            self.net = nn.ModuleList([FiLMBlock(in_dim=in_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu")])
+            self.net = nn.ModuleList([FiLMBlock(in_dim=in_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act=out_act)])
         else:
             layers = [FiLMBlock(in_dim=in_dim, out_dim=hidden_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu")]
             for i in range(num_layer - 2):
