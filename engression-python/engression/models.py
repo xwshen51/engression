@@ -105,11 +105,28 @@ class StoResBlock(nn.Module):
         return out
 
 
+# class FiLMBlock(nn.Module):
+#     def __init__(self, in_dim, out_dim, condition_dim, 
+#                  hidden_dim=512, noise_dim=0, add_bn=False, resblock=False, out_act=None):
+#         super().__init__()
+#         self.condition_layer = nn.Linear(condition_dim, out_dim * 2)
+#         if resblock:
+#             self.net = StoLayer(in_dim, out_dim, noise_dim, add_bn, out_act)
+#         else:
+#             self.net = StoResBlock(in_dim, hidden_dim, out_dim, noise_dim, add_bn, out_act)
+        
+#     def forward(self, x, condition):
+#         gamma, beta = self.condition_layer(condition).chunk(2, dim=1)         
+#         out = self.net(x)
+#         out = gamma * out + beta
+#         return out
+
+
 class FiLMBlock(nn.Module):
     def __init__(self, in_dim, out_dim, condition_dim, 
                  hidden_dim=512, noise_dim=0, add_bn=False, resblock=False, out_act=None):
         super().__init__()
-        self.condition_layer = nn.Linear(condition_dim, out_dim * 2)
+        self.condition_layer = nn.Linear(condition_dim, in_dim * 2)
         if resblock:
             self.net = StoLayer(in_dim, out_dim, noise_dim, add_bn, out_act)
         else:
@@ -117,8 +134,7 @@ class FiLMBlock(nn.Module):
         
     def forward(self, x, condition):
         gamma, beta = self.condition_layer(condition).chunk(2, dim=1)         
-        out = self.net(x)
-        out = gamma * out + beta
+        out = self.net(gamma * x + beta)
         return out
 
 
