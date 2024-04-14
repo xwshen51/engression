@@ -215,7 +215,7 @@ class Engressor(object):
             y (torch.Tensor): trainging data of responses.
             num_epochs (int, optional): number of training epochs. Defaults to None.
             batch_size (int, optional): batch size for mini-batch SGD. Defaults to None.
-            lr
+            lr (float, optional): learning rate.
             print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
             print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
             standardize (bool, optional): whether to standardize the data. Defaults to True.
@@ -265,21 +265,9 @@ class Engressor(object):
                 self.zero_loss()
                 for batch_idx, (x_batch, y_batch) in enumerate(train_loader):
                     self.train_one_iter(x_batch, y_batch)
-                    # self.model.zero_grad()
-                    # y_sample1 = self.model(x_batch)
-                    # y_sample2 = self.model(x_batch)
-                    # loss, loss1, loss2 = energy_loss_two_sample(y_batch, y_sample1, y_sample2, beta=self.beta, verbose=True)
-                    # loss.backward()
-                    # self.optimizer.step()
-                    # self.tr_loss += loss.item()
-                    # self.tr_loss1 += loss1.item()
-                    # self.tr_loss2 += loss2.item()
                     if (epoch_idx == 0 or (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                         if (batch_idx + 1) % ((len(train_loader) - 1) // print_times_per_epoch) == 0:
                             self.print_loss(epoch_idx, batch_idx)
-                            # print("[Epoch {} ({:.0f}%), batch {}] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
-                            #     epoch_idx + 1, 100 * epoch_idx / num_epochs, batch_idx + 1, 
-                            #     self.tr_loss / (batch_idx + 1), self.tr_loss1 / (batch_idx + 1), self.tr_loss2 / (batch_idx + 1)))
 
         # Evaluate performance on the training data (on the original scale)
         self.model.eval()
@@ -320,6 +308,7 @@ class Engressor(object):
         else:
             print(loss_str)
     
+    @torch.no_grad()
     def predict(self, x, target="mean", sample_size=100):
         """Point prediction. 
 
@@ -343,6 +332,7 @@ class Engressor(object):
             y_pred = self.unstandardize_data(y_pred)
         return y_pred
     
+    @torch.no_grad()
     def sample(self, x, sample_size=100, expand_dim=True):
         """Sample new response data.
 
@@ -362,8 +352,11 @@ class Engressor(object):
         x = self.standardize_data(x)
         y_samples = self.model.sample(x, sample_size, expand_dim=expand_dim)            
         y_samples = self.unstandardize_data(y_samples, expand_dim=expand_dim)
+        if sample_size == 1:
+            y_samples = y_samples.squeeze(len(y_samples.shape) - 1)
         return y_samples
     
+    @torch.no_grad()
     def eval_loss(self, x, y, loss_type="l2", sample_size=None, beta=1, verbose=False):
         """Compute the loss for evaluation.
 
@@ -403,6 +396,7 @@ class Engressor(object):
             loss, loss1, loss2 = loss
             return loss.item(), loss1.item(), loss2.item()        
     
+    @torch.no_grad()
     def plot(self, x_te, y_te, x_tr=None, y_tr=None, x_idx=0, y_idx=0, 
              target="mean", sample_size=100, save_dir=None,
              alpha=0.8, ymin=None, ymax=None):

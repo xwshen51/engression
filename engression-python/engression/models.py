@@ -45,7 +45,7 @@ def get_act_func(name):
     elif name == "tanh":
         return nn.Tanh() 
     elif name == "softmax":
-        return nn.Softmax(dim=1) #if out_dim == 1 else nn.Softmax(dim=1)
+        return nn.Softmax(dim=1)
     else:
         return None
 
@@ -201,7 +201,7 @@ class StoNetBase(nn.Module):
             x_rep = x.repeat(sample_size, 1)
             ## samples of shape (data_size*sample_size, response_dim) such that samples[data_size*(i-1):data_size*i,:] contains one sample for each data point, for i = 1, ..., sample_size
             samples = self.forward(x=x_rep).detach()
-        if not expand_dim or sample_size == 1:
+        if not expand_dim:# or sample_size == 1:
             return samples
         else:
             expand_dim = len(samples.shape)
