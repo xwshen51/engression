@@ -299,10 +299,10 @@ class StoNet(StoNetBase):
                 self.net = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
                                        noise_dim=noise_dim, add_bn=add_bn, out_act=out_act)
             else:
-                if not noise_all_layer:
-                    noise_dim = 0
                 self.input_layer = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=hidden_dim, 
                                                noise_dim=noise_dim, add_bn=add_bn, out_act="relu")
+                if not noise_all_layer:
+                    noise_dim = 0
                 self.inter_layer = nn.Sequential(*[StoResBlock(dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(self.num_blocks - 2))
                 self.out_layer = StoResBlock(dim=hidden_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
                                              noise_dim=noise_dim, add_bn=add_bn, out_act=out_act) # output layer with concatinated noise
