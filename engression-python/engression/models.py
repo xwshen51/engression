@@ -265,7 +265,8 @@ class StoNet(StoNetBase):
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=True, out_act=None, resblock=False, noise_all_layer=True):
+                 noise_dim=100, add_bn=True, out_act=None, resblock=False, 
+                 noise_all_layer=True, out_bias=True):
         super().__init__(noise_dim)
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -273,6 +274,7 @@ class StoNet(StoNetBase):
         self.noise_dim = noise_dim
         self.add_bn = add_bn
         self.noise_all_layer = noise_all_layer
+        self.out_bias = out_bias
         if out_act == "relu":
             self.out_act = nn.ReLU(inplace=True)
         elif out_act == "sigmoid":
@@ -312,7 +314,7 @@ class StoNet(StoNetBase):
                 noise_dim = 0
             self.inter_layer = nn.Sequential(*[StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(num_layer - 2))
             # self.out_layer = StoLayer(in_dim=hidden_dim, out_dim=out_dim, noise_dim=noise_dim, add_bn=False, out_act=out_act) # output layer with concatinated noise
-            self.out_layer = nn.Linear(hidden_dim, out_dim)
+            self.out_layer = nn.Linear(hidden_dim, out_dim, bias=out_bias)
             if self.out_act is not None:
                 self.out_layer = nn.Sequential(*[self.out_layer, self.out_act])
             
