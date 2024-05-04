@@ -37,9 +37,10 @@ def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=False):
     """Loss function based on the energy score (estimated based on two samples).
     
     Args:
-        x0 (torch.Tensor): iid samples from the true distribution.
-        x (torch.Tensor): iid samples from the estimated distribution.
-        xp (torch.Tensor): iid samples from the estimated distribution.
+        x0 (torch.Tensor): an iid sample from the true distribution.
+        x (torch.Tensor): an iid sample from the estimated distribution.
+        xp (torch.Tensor): another iid sample from the estimated distribution.
+        xp0 (torch.Tensor): another iid sample from the true distribution.
         beta (float): power parameter in the energy score.
         verbose (bool):  whether to return two terms of the loss.
     
