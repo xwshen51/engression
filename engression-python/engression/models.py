@@ -105,11 +105,42 @@ class StoResBlock(nn.Module):
         return out
 
 
-# class FiLMBlock(nn.Module):
+class FiLMBlock(nn.Module):
+    def __init__(self, in_dim, out_dim, condition_dim, 
+                 hidden_dim=512, noise_dim=0, add_bn=False, resblock=False, 
+                 out_act=None, film_pos='out', film_level=1):
+        super().__init__()
+        self.film_pos = film_pos
+        self.film_level = film_level
+        film_out_dim = out_dim if film_pos == 'out' else in_dim
+        if film_level > 1:
+            self.condition_layer = nn.Linear(condition_dim, film_out_dim * 2)
+        elif film_level == 1:
+            self.condition_layer = nn.Linear(condition_dim, film_out_dim)
+        if resblock:
+            self.net = StoLayer(in_dim, out_dim, noise_dim, add_bn, out_act)
+        else:
+            self.net = StoResBlock(in_dim, hidden_dim, out_dim, noise_dim, add_bn, out_act)
+        
+    def forward(self, x, condition):
+        out = self.net(x) if self.film_pos == 'out' else x
+        if self.film_level > 1:
+            gamma, beta = self.condition_layer(condition).chunk(2, dim=1)         
+            out = gamma * out + beta
+        elif self.film_level == 1:
+            beta = self.condition_layer(condition)
+            out = out + beta
+        if self.film_pos == 'in':
+            out = self.net(out)
+        return out
+
+
+# class FiLMBlockIn(nn.Module):
 #     def __init__(self, in_dim, out_dim, condition_dim, 
-#                  hidden_dim=512, noise_dim=0, add_bn=False, resblock=False, out_act=None):
+#                  hidden_dim=512, noise_dim=0, add_bn=False, resblock=False, 
+#                  out_act=None, film_level=1):
 #         super().__init__()
-#         self.condition_layer = nn.Linear(condition_dim, out_dim * 2)
+#         self.condition_layer = nn.Linear(condition_dim, in_dim * 2)
 #         if resblock:
 #             self.net = StoLayer(in_dim, out_dim, noise_dim, add_bn, out_act)
 #         else:
@@ -117,25 +148,8 @@ class StoResBlock(nn.Module):
         
 #     def forward(self, x, condition):
 #         gamma, beta = self.condition_layer(condition).chunk(2, dim=1)         
-#         out = self.net(x)
-#         out = gamma * out + beta
+#         out = self.net(gamma * x + beta)
 #         return out
-
-
-class FiLMBlock(nn.Module):
-    def __init__(self, in_dim, out_dim, condition_dim, 
-                 hidden_dim=512, noise_dim=0, add_bn=False, resblock=False, out_act=None):
-        super().__init__()
-        self.condition_layer = nn.Linear(condition_dim, in_dim * 2)
-        if resblock:
-            self.net = StoLayer(in_dim, out_dim, noise_dim, add_bn, out_act)
-        else:
-            self.net = StoResBlock(in_dim, hidden_dim, out_dim, noise_dim, add_bn, out_act)
-        
-    def forward(self, x, condition):
-        gamma, beta = self.condition_layer(condition).chunk(2, dim=1)         
-        out = self.net(gamma * x + beta)
-        return out
 
 
 class StoNetBase(nn.Module):
@@ -340,7 +354,8 @@ class CondStoNet(StoNetBase):
         condition_dim
     """
     def __init__(self, in_dim, out_dim, condition_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=False, out_act=None, resblock=False, noise_all_layer=True):
+                 noise_dim=100, add_bn=False, out_act=None, resblock=False, 
+                 noise_all_layer=True, film_pos='out', film_level=1):
         super().__init__(noise_dim)
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -362,14 +377,14 @@ class CondStoNet(StoNetBase):
         if resblock:
             num_layer = self.num_blocks
         if self.num_blocks == 1:
-            self.net = nn.ModuleList([FiLMBlock(in_dim=in_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act=out_act)])
+            self.net = nn.ModuleList([FiLMBlock(in_dim=in_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act=out_act, film_pos=film_pos, film_level=film_level)])
         else:
-            layers = [FiLMBlock(in_dim=in_dim, out_dim=hidden_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu")]
+            layers = [FiLMBlock(in_dim=in_dim, out_dim=hidden_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu", film_pos=film_pos, film_level=film_level)]
             if not noise_all_layer:
                 noise_dim = 0
             for i in range(num_layer - 2):
-                layers.append(FiLMBlock(in_dim=hidden_dim, out_dim=hidden_dim, condition_dim=condition_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu"))
-            layers.append(FiLMBlock(in_dim=hidden_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act=out_act))
+                layers.append(FiLMBlock(in_dim=hidden_dim, out_dim=hidden_dim, condition_dim=condition_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu", film_pos=film_pos, film_level=film_level))
+            layers.append(FiLMBlock(in_dim=hidden_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act=out_act, film_pos=film_pos, film_level=film_level))
             self.net = nn.ModuleList(layers)
             
     def forward(self, x, condition):
