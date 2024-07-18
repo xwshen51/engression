@@ -340,7 +340,7 @@ class CondStoNet(StoNetBase):
         condition_dim
     """
     def __init__(self, in_dim, out_dim, condition_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=False, out_act=None, resblock=False):
+                 noise_dim=100, add_bn=False, out_act=None, resblock=False, noise_all_layer=True):
         super().__init__(noise_dim)
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -348,6 +348,7 @@ class CondStoNet(StoNetBase):
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
+        self.noise_all_layer = noise_all_layer
         
         self.num_blocks = None
         if resblock:
@@ -364,6 +365,8 @@ class CondStoNet(StoNetBase):
             self.net = nn.ModuleList([FiLMBlock(in_dim=in_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act=out_act)])
         else:
             layers = [FiLMBlock(in_dim=in_dim, out_dim=hidden_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu")]
+            if not noise_all_layer:
+                noise_dim = 0
             for i in range(num_layer - 2):
                 layers.append(FiLMBlock(in_dim=hidden_dim, out_dim=hidden_dim, condition_dim=condition_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act="relu"))
             layers.append(FiLMBlock(in_dim=hidden_dim, out_dim=out_dim, condition_dim=condition_dim, hidden_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, resblock=resblock, out_act=out_act))
