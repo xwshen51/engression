@@ -46,6 +46,8 @@ def get_act_func(name):
         return nn.Tanh() 
     elif name == "softmax":
         return nn.Softmax(dim=1)
+    elif name == "elu":
+        return nn.ELU(inplace=True)
     else:
         return None
 
@@ -289,16 +291,9 @@ class StoNet(StoNetBase):
         self.add_bn = add_bn
         self.noise_all_layer = noise_all_layer
         self.out_bias = out_bias
-        if out_act == "relu":
-            self.out_act = nn.ReLU(inplace=True)
-        elif out_act == "sigmoid":
-            self.out_act = nn.Sigmoid()
-        elif out_act == "softmax":
-            self.out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
-        elif out_act == "tanh":
-            self.out_act = nn.Tanh()
-        else:
-            self.out_act = None
+        if out_act == "softmax" and out_dim == 1:
+            out_act = "sigmoid"
+        self.out_act = get_act_func(out_act)
         
         self.num_blocks = None
         if resblock:
