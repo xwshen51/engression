@@ -33,7 +33,7 @@ def energy_loss(x_true, x_est, beta=1, verbose=False):
         return (s1 - s2 / 2)
     
 
-def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=False):
+def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=False, weights=None):
     """Loss function based on the energy score (estimated based on two samples).
     
     Args:
@@ -51,16 +51,18 @@ def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=False):
     x0 = vectorize(x0)
     x = vectorize(x)
     xp = vectorize(xp)
+    if weights is None:
+        weights = 1 / x0.size(0)
     if x0p is None:
-        s1 = (vector_norm(x - x0, 2, dim=1) + EPS).pow(beta).mean() / 2 + (vector_norm(xp - x0, 2, dim=1) + EPS).pow(beta).mean() / 2
-        s2 = (vector_norm(x - xp, 2, dim=1) + EPS).pow(beta).mean() 
+        s1 = ((vector_norm(x - x0, 2, dim=1) + EPS).pow(beta) * weights).sum() / 2 + ((vector_norm(xp - x0, 2, dim=1) + EPS).pow(beta) * weights).sum() / 2
+        s2 = ((vector_norm(x - xp, 2, dim=1) + EPS).pow(beta) * weights).sum() 
         loss = s1 - s2/2
     else:
         x0p = vectorize(x0p)
-        s1 = ((vector_norm(x - x0, 2, dim=1) + EPS).pow(beta).mean() + (vector_norm(xp - x0, 2, dim=1) + EPS).pow(beta).mean() + 
-              (vector_norm(x - x0p, 2, dim=1) + EPS).pow(beta).mean() + (vector_norm(xp - x0p, 2, dim=1) + EPS).pow(beta).mean()) / 4
-        s2 = (vector_norm(x - xp, 2, dim=1) + EPS).pow(beta).mean() 
-        s3 = (vector_norm(x0 - x0p, 2, dim=1) + EPS).pow(beta).mean() 
+        s1 = ((vector_norm(x - x0, 2, dim=1) + EPS).pow(beta).sum() + (vector_norm(xp - x0, 2, dim=1) + EPS).pow(beta).sum() + 
+              (vector_norm(x - x0p, 2, dim=1) + EPS).pow(beta).sum() + (vector_norm(xp - x0p, 2, dim=1) + EPS).pow(beta).sum()) / 4
+        s2 = (vector_norm(x - xp, 2, dim=1) + EPS).pow(beta).sum() 
+        s3 = (vector_norm(x0 - x0p, 2, dim=1) + EPS).pow(beta).sum() 
         loss = s1 - s2/2 - s3/2
     if verbose:
         return torch.cat([loss.reshape(1), s1.reshape(1), s2.reshape(1)], dim=0)
