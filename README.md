@@ -52,7 +52,7 @@ x, y = preanm_simulator("square", n=10000, x_lower=0, x_upper=2, noise_std=1, tr
 x_eval, y_eval_med, y_eval_mean = preanm_simulator("square", n=1000, x_lower=0, x_upper=4, noise_std=1, train=False, device=device)
 
 ## Fit an engression model
-engressor = engression(x, y, lr=0.01, num_epoches=500, batch_size=1000, device="cuda")
+engressor = engression(x, y, lr=0.01, num_epochs=500, batch_size=1000, device="cuda")
 ## Summarize model information
 engressor.summary()
 

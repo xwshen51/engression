@@ -28,9 +28,13 @@ class StoLayer(nn.Module):
             out_act = "sigmoid"
         self.out_act = get_act_func(out_act)
     
-    def forward(self, x):
+    def forward(self, x=None):
         eps = torch.randn(x.size(0), self.noise_dim, device=x.device) * self.noise_std
-        out = torch.cat([x, eps], dim=1)
+        if x is None:
+            assert self.in_dim == 0
+            out = eps
+        else:
+            out = torch.cat([x, eps], dim=1)
         out = self.layer(out)
         if self.out_act is not None:
             out = self.out_act(out)
@@ -327,7 +331,7 @@ class StoNet(StoNetBase):
             if self.out_act is not None:
                 self.out_layer = nn.Sequential(*[self.out_layer, self.out_act])
             
-    def forward(self, x):
+    def forward(self, x=None):
         if self.num_blocks == 1:
             return self.net(x)
         else:
