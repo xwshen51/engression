@@ -29,12 +29,13 @@ class StoLayer(nn.Module):
         self.out_act = get_act_func(out_act)
     
     def forward(self, x):
+        device = next(self.layer.parameters()).device
         if isinstance(x, int):
             # x is the batch size.
             assert self.in_dim == 0
-            out = torch.randn(x, self.noise_dim, device=x.device) * self.noise_std
+            out = torch.randn(x, self.noise_dim, device=device) * self.noise_std
         else:
-            eps = torch.randn(x.size(0), self.noise_dim, device=x.device) * self.noise_std
+            eps = torch.randn(x.size(0), self.noise_dim, device=device) * self.noise_std
             out = torch.cat([x, eps], dim=1)
         out = self.layer(out)
         if self.out_act is not None:
