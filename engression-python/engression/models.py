@@ -31,11 +31,13 @@ class StoLayer(nn.Module):
     def forward(self, x):
         device = next(self.layer.parameters()).device
         if isinstance(x, int):
-            # x is the batch size.
+            # For unconditional generation, x is the batch size.
             assert self.in_dim == 0
             out = torch.randn(x, self.noise_dim, device=device) * self.noise_std
         else:
-            eps = torch.randn(x.size(0), self.noise_dim, device=device) * self.noise_std
+            if x.size(1) < self.in_dim:
+                print("Warning: covariate dimension does not aligned with the specified input dimension; filling in the remaining dimension with noise.")
+            eps = torch.randn(x.size(0), self.noise_dim + self.in_dim - x.size(1), device=device) * self.noise_std
             out = torch.cat([x, eps], dim=1)
         out = self.layer(out)
         if self.out_act is not None:

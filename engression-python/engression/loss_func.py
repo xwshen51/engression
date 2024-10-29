@@ -3,7 +3,7 @@ from .utils import vectorize
 from torch.linalg import vector_norm
 
 
-def energy_loss(x_true, x_est, beta=1, verbose=False):
+def energy_loss(x_true, x_est, beta=1, verbose=True):
     """Loss function based on the energy score.
 
     Args:
@@ -33,7 +33,7 @@ def energy_loss(x_true, x_est, beta=1, verbose=False):
         return (s1 - s2 / 2)
     
 
-def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=False, weights=None):
+def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=True, weights=None):
     """Loss function based on the energy score (estimated based on two samples).
     
     Args:
