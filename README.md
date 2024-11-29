@@ -104,3 +104,21 @@ plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")
 
 ## Contact information
 If you meet any problems with the code, please submit an issue or contact [Xinwei Shen](mailto:xinwei.shen@stat.math.ethz.ch).
+
+
+## Citation
+If you would refer to or extend our work, please cite the following paper:
+```
+@article{10.1093/jrsssb/qkae108,
+    author = {Shen, Xinwei and Meinshausen, Nicolai},
+    title = {Engression: extrapolation through the lens of distributional regression},
+    journal = {Journal of the Royal Statistical Society Series B: Statistical Methodology},
+    pages = {qkae108},
+    year = {2024},
+    month = {11},
+    issn = {1369-7412},
+    doi = {10.1093/jrsssb/qkae108},
+    url = {https://doi.org/10.1093/jrsssb/qkae108},
+    eprint = {https://academic.oup.com/jrsssb/advance-article-pdf/doi/10.1093/jrsssb/qkae108/60827977/qkae108.pdf},
+}
+```
