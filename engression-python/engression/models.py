@@ -12,13 +12,14 @@ class StoLayer(nn.Module):
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
     """
-    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=True, out_act=None, noise_std=1):
+    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=True, out_act=None, noise_std=1, verbose=True):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.noise_dim = noise_dim
         self.add_bn = add_bn
         self.noise_std = noise_std
+        self.verbose = verbose
         
         layer = [nn.Linear(in_dim + noise_dim, out_dim)]
         if add_bn:
@@ -35,7 +36,7 @@ class StoLayer(nn.Module):
             assert self.in_dim == 0
             out = torch.randn(x, self.noise_dim, device=device) * self.noise_std
         else:
-            if x.size(1) < self.in_dim:
+            if x.size(1) < self.in_dim and self.verbose:
                 print("Warning: covariate dimension does not aligned with the specified input dimension; filling in the remaining dimension with noise.")
             eps = torch.randn(x.size(0), self.noise_dim + self.in_dim - x.size(1), device=device) * self.noise_std
             out = torch.cat([x, eps], dim=1)
@@ -183,8 +184,6 @@ class StoNetBase(nn.Module):
             
         Here we do not call `sample` but directly call `forward`.
         """
-        if self.noise_dim == 0:
-            sample_size = 1
         samples = self.sample(x=x, sample_size=sample_size, expand_dim=True)
         if not isinstance(target, list):
             target = [target]
@@ -290,7 +289,7 @@ class StoNet(StoNetBase):
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
                  noise_dim=100, add_bn=True, out_act=None, resblock=False, 
-                 noise_all_layer=True, out_bias=True):
+                 noise_all_layer=True, out_bias=True, verbose=True):
         super().__init__(noise_dim)
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -326,7 +325,7 @@ class StoNet(StoNetBase):
                 self.out_layer = StoResBlock(dim=hidden_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
                                              noise_dim=noise_dim, add_bn=add_bn, out_act=out_act) # output layer with concatinated noise
         else:
-            self.input_layer = StoLayer(in_dim=in_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")
+            self.input_layer = StoLayer(in_dim=in_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu", verbose=verbose)
             if not noise_all_layer:
                 noise_dim = 0
             self.inter_layer = nn.Sequential(*[StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(num_layer - 2))
