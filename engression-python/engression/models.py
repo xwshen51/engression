@@ -57,6 +57,8 @@ def get_act_func(name):
         return nn.Softmax(dim=1)
     elif name == "elu":
         return nn.ELU(inplace=True)
+    elif name == "softplus":
+        return nn.Softplus()
     else:
         return None
 
