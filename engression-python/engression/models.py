@@ -166,9 +166,9 @@ class FiLMBlock(nn.Module):
 
 
 class StoNetBase(nn.Module):
-    def __init__(self, noise_dim):
+    def __init__(self, forward_sampling=True):
         super().__init__()
-        self.noise_dim = noise_dim
+        self.sampling_func = self.forward if forward_sampling else self.sampling_func
     
     @torch.no_grad()
     def predict(self, x, target=["mean"], sample_size=100):
@@ -226,7 +226,7 @@ class StoNetBase(nn.Module):
             ## repeat the data for sample_size times, get a tensor [data, data, ..., data]
             x_rep = x.repeat(sample_size, 1)
             ## samples of shape (data_size*sample_size, response_dim) such that samples[data_size*(i-1):data_size*i,:] contains one sample for each data point, for i = 1, ..., sample_size
-            samples = self.forward(x=x_rep).detach()
+            samples = self.sampling_func(x=x_rep).detach()
         if not expand_dim:# or sample_size == 1:
             return samples
         else:
@@ -292,7 +292,7 @@ class StoNet(StoNetBase):
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
                  noise_dim=100, add_bn=True, out_act=None, resblock=False, 
                  noise_all_layer=True, out_bias=True, verbose=True):
-        super().__init__(noise_dim)
+        super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.hidden_dim = hidden_dim
@@ -360,7 +360,7 @@ class CondStoNet(StoNetBase):
     def __init__(self, in_dim, out_dim, condition_dim, num_layer=2, hidden_dim=100, 
                  noise_dim=100, add_bn=False, out_act=None, resblock=False, 
                  noise_all_layer=True, film_pos='out', film_level=1):
-        super().__init__(noise_dim)
+        super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.condition_dim = condition_dim

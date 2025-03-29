@@ -182,3 +182,5 @@ tags
 # lm_evaluation cache
 lm_cache/
 
+
+.codegpt
