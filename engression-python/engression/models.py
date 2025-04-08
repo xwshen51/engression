@@ -12,7 +12,7 @@ class StoLayer(nn.Module):
         noise_dim (int, optional): noise dimension. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
     """
-    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=True, out_act=None, noise_std=1, verbose=True):
+    def __init__(self, in_dim, out_dim, noise_dim=100, add_bn=False, out_act=None, noise_std=1, verbose=True):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -74,7 +74,7 @@ class StoResBlock(nn.Module):
         add_bn (bool, optional): whether to add batch normalization. Defaults to True.
         out_act (str, optional): output activation function. Defaults to None.
     """
-    def __init__(self, dim=100, hidden_dim=None, out_dim=None, noise_dim=100, add_bn=True, out_act=None, noise_std=1):
+    def __init__(self, dim=100, hidden_dim=None, out_dim=None, noise_dim=100, add_bn=False, out_act=None, noise_std=1):
         super().__init__()
         self.noise_dim = noise_dim
         self.noise_std = noise_std
@@ -290,7 +290,7 @@ class StoNet(StoNetBase):
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
-                 noise_dim=100, add_bn=True, out_act=None, resblock=False, 
+                 noise_dim=100, add_bn=False, out_act=None, resblock=False, 
                  noise_all_layer=True, out_bias=True, verbose=True):
         super().__init__()
         self.in_dim = in_dim
@@ -410,7 +410,7 @@ class Net(nn.Module):
         sigmoid (bool, optional): whether to add sigmoid or softmax at the end. Defaults to False.
     """
     def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, 
-                 add_bn=True, sigmoid=False):
+                 add_bn=False, sigmoid=False):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -472,7 +472,7 @@ class ResMLP(nn.Module):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
     """
-    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, add_bn=True, sigmoid=False):
+    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, add_bn=False, sigmoid=False):
         super().__init__()
         out_act = "sigmoid" if sigmoid else None
         if num_layer % 2 != 0:
