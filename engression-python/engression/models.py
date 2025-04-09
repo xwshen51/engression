@@ -222,11 +222,15 @@ class StoNetBase(nn.Module):
             torch.Tensor of shape (data_size, response_dim, sample_size) if expand_dim else (data_size*sample_size, response_dim), where response_dim could have multiple channels.
         """
         data_size = x.size(0) ## input data size
-        with torch.no_grad():
-            ## repeat the data for sample_size times, get a tensor [data, data, ..., data]
+        if not require_grad:
+            with torch.no_grad():
+                ## repeat the data for sample_size times, get a tensor [data, data, ..., data]
+                x_rep = x.repeat(sample_size, 1)
+                ## samples of shape (data_size*sample_size, response_dim) such that samples[data_size*(i-1):data_size*i,:] contains one sample for each data point, for i = 1, ..., sample_size
+                samples = self.sampling_func(x=x_rep).detach()
+        else:
             x_rep = x.repeat(sample_size, 1)
-            ## samples of shape (data_size*sample_size, response_dim) such that samples[data_size*(i-1):data_size*i,:] contains one sample for each data point, for i = 1, ..., sample_size
-            samples = self.sampling_func(x=x_rep).detach()
+            samples = self.sampling_func(x=x_rep)
         if not expand_dim:# or sample_size == 1:
             return samples
         else:
