@@ -210,7 +210,7 @@ class StoNetBase(nn.Module):
         else:
             return results
 
-    def sample_onebatch(self, x, sample_size=100, expand_dim=True):
+    def sample_onebatch(self, x, sample_size=100, expand_dim=True, require_grad=False):
         """Sampling new response data (for one batch of data).
 
         Args:
@@ -239,7 +239,7 @@ class StoNetBase(nn.Module):
             # without expanding dimensions:
             # samples.reshape(-1, *samples.shape[1:-1])
     
-    def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None):
+    def sample_batch(self, x, sample_size=100, expand_dim=True, batch_size=None, require_grad=False):
         """Sampling with mini-batches; only used when out-of-memory.
 
         Args:
@@ -255,18 +255,18 @@ class StoNetBase(nn.Module):
             test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
             samples = []
             for (x_batch,) in test_loader:
-                samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim))
+                samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim, require_grad))
             samples = torch.cat(samples, dim=0)
         else:
             samples = self.sample_onebatch(x, sample_size, expand_dim)
         return samples
     
-    def sample(self, x, sample_size=100, expand_dim=True, verbose=True):
+    def sample(self, x, sample_size=100, expand_dim=True, require_grad=False, verbose=True):
         """Sampling that adaptively adjusts the batch size according to the GPU memory."""
         batch_size = x.shape[0]
         while True:
             try:
-                samples = self.sample_batch(x, sample_size, expand_dim, batch_size)
+                samples = self.sample_batch(x, sample_size, expand_dim, batch_size, require_grad)
                 break
             except RuntimeError as e:
                 if "out of memory" in str(e):
