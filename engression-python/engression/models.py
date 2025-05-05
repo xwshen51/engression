@@ -227,10 +227,10 @@ class StoNetBase(nn.Module):
                 ## repeat the data for sample_size times, get a tensor [data, data, ..., data]
                 x_rep = x.repeat(sample_size, 1)
                 ## samples of shape (data_size*sample_size, response_dim) such that samples[data_size*(i-1):data_size*i,:] contains one sample for each data point, for i = 1, ..., sample_size
-                samples = self.sampling_func(x=x_rep).detach()
+                samples = self.sampling_func(x_rep).detach()
         else:
             x_rep = x.repeat(sample_size, 1)
-            samples = self.sampling_func(x=x_rep)
+            samples = self.sampling_func(x_rep)
         if not expand_dim:# or sample_size == 1:
             return samples
         else:
