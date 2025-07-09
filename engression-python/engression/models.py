@@ -295,8 +295,8 @@ class StoNet(StoNetBase):
     """
     def __init__(self, in_dim, out_dim, num_layer=2, hidden_dim=100, 
                  noise_dim=100, add_bn=False, out_act=None, resblock=False, 
-                 noise_all_layer=True, out_bias=True, verbose=True):
-        super().__init__()
+                 noise_all_layer=True, out_bias=True, verbose=True, forward_sampling=True):
+        super().__init__(forward_sampling=forward_sampling)
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.hidden_dim = hidden_dim
