@@ -9,7 +9,7 @@ from .utils import *
 
 def engression_bagged(x, y, 
                       num_layer=2, hidden_dim=100, noise_dim=100,
-                      lr=0.001, num_epoches=500, batch_size=None, 
+                      lr=0.001, num_epochs=500, batch_size=None, 
                       device="cpu", standardize=True,
                       ensemble_size=10, val_loss_type="energy"):
     """This function fits a bagged engression model to the data by aggregating multiple engression models fitted on subsamples of the data. It calculates validation losses that helps with hyperparameter tuning.
@@ -21,7 +21,7 @@ def engression_bagged(x, y,
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
         lr (float, optional): learning rate. Defaults to 0.001.
-        num_epoches (int, optional): number of epochs. Defaults to 500.
+        num_epochs (int, optional): number of epochs. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None.
         device (str, torch.device, optional): device. Defaults to "cpu". Choices = ["cpu", "gpu", "cuda"].
         standardize (bool, optional):  whether to standardize data for training. Defaults to True.
@@ -33,7 +33,7 @@ def engression_bagged(x, y,
     """
     engressor = BaggedEngressor(in_dim=x.shape[1], out_dim=y.shape[1], 
                                 num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
-                                lr=lr, num_epoches=num_epoches, batch_size=batch_size, 
+                                lr=lr, num_epochs=num_epochs, batch_size=batch_size, 
                                 device=device, standardize=standardize, 
                                 ensemble_size=ensemble_size, val_loss_type=val_loss_type)
     engressor.train(x, y)
@@ -50,7 +50,7 @@ class BaggedEngressor(object):
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
         lr (float, optional): learning rate. Defaults to 0.001.
-        num_epoches (int, optional): number of epoches. Defaults to 500.
+        num_epochs (int, optional): number of epochs. Defaults to 500.
         batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
         device (str or torch.device, optional): device. Defaults to "cpu".
         standardize (bool, optional): whether to standardize data. Defaults to True.
@@ -59,7 +59,7 @@ class BaggedEngressor(object):
     """
     def __init__(self, 
                  in_dim, out_dim, num_layer=2, hidden_dim=100, noise_dim=100,
-                 lr=0.001, num_epoches=500, batch_size=None, 
+                 lr=0.001, num_epochs=500, batch_size=None, 
                  device="cpu", standardize=True,
                  ensemble_size=10, val_loss_type="energy"): 
         super().__init__()
@@ -67,7 +67,7 @@ class BaggedEngressor(object):
         self.hidden_dim = hidden_dim
         self.noise_dim = noise_dim
         self.lr = lr
-        self.num_epoches = num_epoches
+        self.num_epochs = num_epochs
         self.batch_size = batch_size
         self.ensemble_size = ensemble_size
         self.num_models_for_each_sample = ensemble_size // 2 
@@ -105,7 +105,7 @@ class BaggedEngressor(object):
               "\t number of layers: {}\n".format(self.num_layer) +
               "\t hidden dimensions: {}\n".format(self.hidden_dim) +
               "\t noise dimensions: {}\n".format(self.noise_dim) +
-              "\t number of epochs: {}\n".format(self.num_epoches) +
+              "\t number of epochs: {}\n".format(self.num_epochs) +
               "\t batch size: {}\n".format(self.batch_size) +
               "\t learning rate: {}\n".format(self.lr) +
               "\t standardization: {}\n".format(self.standardize) +
@@ -114,13 +114,13 @@ class BaggedEngressor(object):
               "\t ensemble size: {}\n".format(self.ensemble_size))
         print("Validation {} loss: {:.4f}".format(self.val_loss_type, self.val_loss_final))
         
-    def train(self, x, y, num_epoches=None, batch_size=None, standardize=True, val_loss_type="energy", val_sample_size=100):
+    def train(self, x, y, num_epochs=None, batch_size=None, standardize=True, val_loss_type="energy", val_sample_size=100):
         """Fit multiple models on subsamples of the training data.
 
         Args:
             x (torch.Tensor): training data of predictors.
             y (torch.Tensor): trainging data of responses.
-            num_epoches (int, optional): number of training epochs. Defaults to None.
+            num_epochs (int, optional): number of training epochs. Defaults to None.
             batch_size (int, optional): batch size for mini-batch SGD. Defaults to 512.
             print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
             print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
@@ -131,8 +131,8 @@ class BaggedEngressor(object):
             val_sample_size (int, optional): generated sample size for evaluating the validation loss. Defaults to 100.
         """
         self.train_mode()
-        if num_epoches is None:
-            num_epoches = self.num_epoches
+        if num_epochs is None:
+            num_epochs = self.num_epochs
         if batch_size is None:
             batch_size = self.batch_size if self.batch_size is not None else x.size(0)
         if val_loss_type == "":
@@ -161,7 +161,7 @@ class BaggedEngressor(object):
             y_val = y[~train_idx]
             if verbose:
                 print("Model 1 training details:\n")
-            model.train(x_train, y_train, num_epoches=num_epoches, batch_size=batch_size, standardize=self.standardize, verbose=verbose)
+            model.train(x_train, y_train, num_epochs=num_epochs, batch_size=batch_size, standardize=self.standardize, verbose=verbose)
             if verbose:
                 print("\n")
             val_loss = model.eval_loss(x_val, y_val, loss_type="energy", sample_size=2)

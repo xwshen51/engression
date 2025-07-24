@@ -289,7 +289,7 @@ class StoNet(StoNetBase):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
-        add_bn (bool, optional): whether to add BN layer. Defaults to True.
+        add_bn (bool, optional): whether to add BN layer. Defaults to False.
         out_act (str, optional): output activation function. Defaults to None.
         resblock (bool, optional): whether to use residual blocks. Defaults to False.
     """
@@ -410,7 +410,7 @@ class Net(nn.Module):
         out_dim (int, optional): output dimension. Defaults to 1.
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
-        add_bn (bool, optional): whether to add BN layer. Defaults to True.
+        add_bn (bool, optional): whether to add BN layer. Defaults to False.
         sigmoid (bool, optional): whether to add sigmoid or softmax at the end. Defaults to False.
     """
     def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, 
