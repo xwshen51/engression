@@ -1,5 +1,4 @@
 from .engression import engression
-from .engression_bagged import engression_bagged
 
 try:
     # pylint: disable=wrong-import-position
