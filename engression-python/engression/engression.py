@@ -256,7 +256,7 @@ class Engressor(object):
                 self.optimizer.step()
                 if (epoch_idx == 0 or  (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                     print("[Epoch {} ({:.0f}%)] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
-                        epoch_idx + 1, 100 * epoch_idx / num_epochs, loss.item(), loss1.item(), loss2.item()))
+                        epoch_idx + 1, 100 * epoch_idx / self.num_epochs, loss.item(), loss1.item(), loss2.item()))
         else:
             train_loader = make_dataloader(x, y, batch_size=batch_size, shuffle=True)
             if verbose:
