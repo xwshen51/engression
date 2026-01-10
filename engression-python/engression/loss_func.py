@@ -3,6 +3,23 @@ from .utils import vectorize
 from torch.linalg import vector_norm
 
 
+def _compute_norm(tensor, p, dim):
+    """Compute norm using torch.norm for MPS devices, vector_norm otherwise.
+
+    Args:
+        tensor (torch.Tensor): input tensor
+        p (float): norm order
+        dim (int): dimension along which to compute norm
+
+    Returns:
+        torch.Tensor: computed norm
+    """
+    if tensor.device.type == 'mps':
+        return torch.norm(tensor, p=p, dim=dim)
+    else:
+        return vector_norm(tensor, ord=p, dim=dim)
+
+
 def energy_loss(x_true, x_est, beta=1, verbose=True):
     """Loss function based on the energy score.
 
@@ -25,7 +42,7 @@ def energy_loss(x_true, x_est, beta=1, verbose=True):
     x_est = [vectorize(x_est[i]).unsqueeze(1) for i in range(m)]
     x_est = torch.cat(x_est, dim=1)
         
-    s1 = (vector_norm(x_est - x_true, 2, dim=2) + EPS).pow(beta).mean()
+    s1 = (_compute_norm(x_est - x_true, 2, dim=2) + EPS).pow(beta).mean()
     s2 = (torch.cdist(x_est, x_est, 2) + EPS).pow(beta).mean() * m / (m - 1)
     if verbose:
         return torch.cat([(s1 - s2 / 2).reshape(1), s1.reshape(1), s2.reshape(1)], dim=0)
@@ -54,15 +71,15 @@ def energy_loss_two_sample(x0, x, xp, x0p=None, beta=1, verbose=True, weights=No
     if weights is None:
         weights = 1 / x0.size(0)
     if x0p is None:
-        s1 = ((vector_norm(x - x0, 2, dim=1) + EPS).pow(beta) * weights).sum() / 2 + ((vector_norm(xp - x0, 2, dim=1) + EPS).pow(beta) * weights).sum() / 2
-        s2 = ((vector_norm(x - xp, 2, dim=1) + EPS).pow(beta) * weights).sum() 
+        s1 = ((_compute_norm(x - x0, 2, dim=1) + EPS).pow(beta) * weights).sum() / 2 + ((_compute_norm(xp - x0, 2, dim=1) + EPS).pow(beta) * weights).sum() / 2
+        s2 = ((_compute_norm(x - xp, 2, dim=1) + EPS).pow(beta) * weights).sum() 
         loss = s1 - s2/2
     else:
         x0p = vectorize(x0p)
-        s1 = ((vector_norm(x - x0, 2, dim=1) + EPS).pow(beta).sum() + (vector_norm(xp - x0, 2, dim=1) + EPS).pow(beta).sum() + 
-              (vector_norm(x - x0p, 2, dim=1) + EPS).pow(beta).sum() + (vector_norm(xp - x0p, 2, dim=1) + EPS).pow(beta).sum()) / 4
-        s2 = (vector_norm(x - xp, 2, dim=1) + EPS).pow(beta).sum() 
-        s3 = (vector_norm(x0 - x0p, 2, dim=1) + EPS).pow(beta).sum() 
+        s1 = ((_compute_norm(x - x0, 2, dim=1) + EPS).pow(beta).sum() + (_compute_norm(xp - x0, 2, dim=1) + EPS).pow(beta).sum() +
+              (_compute_norm(x - x0p, 2, dim=1) + EPS).pow(beta).sum() + (_compute_norm(xp - x0p, 2, dim=1) + EPS).pow(beta).sum()) / 4
+        s2 = (_compute_norm(x - xp, 2, dim=1) + EPS).pow(beta).sum()
+        s3 = (_compute_norm(x0 - x0p, 2, dim=1) + EPS).pow(beta).sum() 
         loss = s1 - s2/2 - s3/2
     if verbose:
         return torch.cat([loss.reshape(1), s1.reshape(1), s2.reshape(1)], dim=0)

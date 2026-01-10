@@ -198,7 +198,13 @@ class StoNetBase(nn.Module):
                 if t == "median":
                     t = 0.5
                 assert isinstance(t, float)
-                results.append(samples.quantile(t, dim=len(samples.shape) - 1))
+                # MPS compatibility: quantile uses lerp which is not supported on MPS
+                original_device = samples.device
+                if original_device.type == 'mps':
+                    quantile_result = samples.cpu().quantile(t, dim=len(samples.shape) - 1).to(original_device)
+                else:
+                    quantile_result = samples.quantile(t, dim=len(samples.shape) - 1)
+                results.append(quantile_result)
                 if min(t, 1 - t) * sample_size < 10:
                     extremes.append(t)
         
