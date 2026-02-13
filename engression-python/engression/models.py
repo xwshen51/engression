@@ -417,18 +417,18 @@ class Net(nn.Module):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         add_bn (bool, optional): whether to add BN layer. Defaults to False.
-        sigmoid (bool, optional): whether to add sigmoid or softmax at the end. Defaults to False.
+        out_act (str, optional): output activation function. Defaults to None.
     """
-    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, 
-                 add_bn=False, sigmoid=False):
+    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100,
+                 add_bn=False, out_act=None):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.num_layer = num_layer
         self.hidden_dim = hidden_dim
         self.add_bn = add_bn
-        self.sigmoid = sigmoid
-        
+        self.out_act = get_act_func(out_act)
+
         net = [nn.Linear(in_dim, hidden_dim)]
         if add_bn:
             net += [nn.BatchNorm1d(hidden_dim)]
@@ -439,9 +439,8 @@ class Net(nn.Module):
                 net += [nn.BatchNorm1d(hidden_dim)]
             net += [nn.ReLU(inplace=True)]
         net.append(nn.Linear(hidden_dim, out_dim))
-        if sigmoid:
-            out_act = nn.Sigmoid() if out_dim == 1 else nn.Softmax(dim=1)
-            net.append(out_act)
+        if self.out_act is not None:
+            net.append(self.out_act)
         self.net = nn.Sequential(*net)
 
     def forward(self, x):
@@ -482,9 +481,8 @@ class ResMLP(nn.Module):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
     """
-    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, add_bn=False, sigmoid=False):
+    def __init__(self, in_dim=1, out_dim=1, num_layer=2, hidden_dim=100, add_bn=False, out_act=None):
         super().__init__()
-        out_act = "sigmoid" if sigmoid else None
         if num_layer % 2 != 0:
             num_layer += 1
             print("The number of layers must be an even number for residual blocks. Added one layer.")
