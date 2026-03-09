@@ -215,6 +215,24 @@ class StoNetBase(nn.Module):
             return results[0]
         else:
             return results
+    
+    @torch.no_grad()
+    def compute_cdf(self, x, y, sample_size=100):
+        """Compute the CDF evaluated at y, i.e. P(Y <= y | X=x), element-wise across response dimensions.
+
+        Args:
+            x (torch.Tensor): covariates of shape (data_size, covariate_dim).
+            y (torch.Tensor): response values of shape (data_size, response_dim), the values at which to evaluate the CDF.
+            sample_size (int, optional): number of samples used to estimate the CDF. Defaults to 100.
+
+        Returns:
+            torch.Tensor of shape (data_size, response_dim): estimated CDF values in [0, 1], computed element-wise per response dimension.
+        """
+        # samples shape: (data_size, response_dim, sample_size)
+        samples = self.sample(x=x, sample_size=sample_size, expand_dim=True)
+        # proportion of samples <= y, element-wise across response dimensions
+        cdf = (samples <= y.unsqueeze(-1)).float().mean(dim=-1)
+        return cdf
 
     def sample_onebatch(self, x, sample_size=100, expand_dim=True, require_grad=False):
         """Sampling new response data (for one batch of data).
