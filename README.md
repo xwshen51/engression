@@ -48,11 +48,11 @@ from engression import engression
 from engression.data.simulator import preanm_simulator
 
 ## Simulate data
-x, y = preanm_simulator("square", n=10000, x_lower=0, x_upper=2, noise_std=1, train=True, device=device)
-x_eval, y_eval_med, y_eval_mean = preanm_simulator("square", n=1000, x_lower=0, x_upper=4, noise_std=1, train=False, device=device)
+x, y = preanm_simulator("square", n=10000, x_lower=0, x_upper=2, noise_std=1, train=True, device="cpu")
+x_eval, y_eval_med, y_eval_mean = preanm_simulator("square", n=1000, x_lower=0, x_upper=4, noise_std=1, train=False, device="cpu")
 
 ## Fit an engression model
-engressor = engression(x, y, lr=0.01, num_epochs=500, batch_size=1000, device="cuda")
+engressor = engression(x, y, lr=0.01, num_epochs=500, batch_size=1000, device="cpu")
 ## Summarize model information
 engressor.summary()
 
