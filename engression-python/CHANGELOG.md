@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- Generalized engression models (GEMs), for responses that are not continuous: binary labels, categorical and ordinal variables, rankings, and vectors that mix these types with continuous ones. The type of the response is given by the new argument `data_type` of `engression` and `Engressor`; see the README. Further new arguments for GEMs: `sigma_dim`, `sigma_min` and `control_variate`. Validation data and the data passed to `eval_loss` must be coded as the training data. The defaults for GEMs may change in later versions.
+- `noise_dim`, `add_bn`, `lr` and `num_epochs` now default to `None`, which means that the package chooses them from the type of the response. A continuous response gets the old defaults, 100, `True`, 0.0001 and 500, so ordinary engression fits are unchanged. A GEM gets a noise dimension equal to the number of columns of `y`, no batch normalization, the learning rate 0.001 and 2000 epochs, which fit GEMs better.
+- `classification=True` is obsolete and gives a warning. For a categorical response, use `data_type="multiclass"` instead.
+- When the CPU runs out of memory, `sample`, `predict` and `eval_loss` draw in smaller batches, as they do on a GPU. Before, the error was raised.
+
 ## 1.0.0
 
 A stable release, with bug fixes and a few new features, chiefly the choice of the training epoch on validation data. Fits with the default settings are unchanged at a fixed seed. Fits change for networks that shared weights, with `out_act`, for data with more than two dimensions, and when a fitted model is trained again on more data; the reported training loss changes when `beta` is not 1.

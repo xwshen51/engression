@@ -1,6 +1,6 @@
 from .engression import engression, Engressor
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 try:
     # pylint: disable=wrong-import-position

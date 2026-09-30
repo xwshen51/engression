@@ -53,6 +53,42 @@ y_pred_quant = engressor.predict(x_eval, target=[0.025, 0.5, 0.975]) ## for the 
 
 Validation data can be passed to choose the number of training iterations: `engression(x, y, x_val=x_val, y_val=y_val)` computes the energy loss on them about every 50 iterations and after the last epoch, and keeps the parameters with the lowest loss; `engressor.summary()` shows the epoch they come from.
 
+### Generalized engression for other types of responses
+
+Generalized engression models (GEMs), proposed in the paper "[*Generalized Engression Models*](https://arxiv.org/abs/2610.01823)", extend engression to responses that are not continuous: binary labels, categorical and ordinal variables, rankings, and vectors that mix several types. A GEM is the generative model $Y=h(g(X,\varepsilon)+\sigma(X)\odot\eta)$, where $g$ is the engression network with noise $\varepsilon$, the link $h$ maps its continuous output to the type of the response, and $\eta$ is Gaussian noise with a learned scale $\sigma(X)$. It is fitted by the same energy loss, and the same call serves every type; only the argument `data_type` changes. For continuous responses, the method is identical to engression.
+```python
+from engression import engression
+
+fit = engression(x, y)                                     # continuous response
+fit = engression(x, y, data_type="multilabel")             # several binary labels
+fit = engression(x, y, data_type="ranking")                # a ranking of the columns of y
+fit = engression(x, y, data_type={"continuous": 0,         # mixed response: one link
+                                  "multilabel": 7,         # per block, each given by
+                                  "multiclass": 12})       # its first column
+
+y_draws = fit.sample(x_new, sample_size=1000)              # draws of Y given x_new
+```
+
+The response `y` is a tensor with one row per observation, coded as follows.
+
+| `data_type` | response | coding of `y` | link |
+|---|---|---|---|
+| `"continuous"` | real values | the values | identity |
+| `"multilabel"` | several binary labels | one column per label, all coded as 0/1 or all as -1/+1 | sign |
+| `"multiclass"` | one categorical variable | indicator (one-hot) vectors, one column per class | largest coordinate |
+| `"ordinal:L"` | ordinal variables with `L` levels | one column per variable, with levels 1, ..., `L` | rounding to the nearest level |
+| `"ranking"` | a ranking of $k$ items | rank vectors: column $i$ is the position of item $i$, where 1 is the top | ranks of the coordinates |
+
+For a mixed response, `data_type` is a dictionary with the data types as keys and the first column of each block as values; a list of pairs, such as `[("multiclass", 0), ("multiclass", 3)]`, is used when a type appears more than once.
+
+As for a continuous response, `fit.sample` draws from the fitted conditional distribution, in the coding of `y`, and `fit.predict` and `fit.eval_loss` are computed from such draws. In particular, `fit.predict(x_new, target="mean")` gives the probabilities of the labels coded as 0/1 and of the classes, and the mean level or position otherwise. When `standardize=True`, only the continuous columns of `y` are standardized.
+
+Remarks on fitting a GEM:
+* GEMs are new in version 1.1.0, and their defaults may change in later versions.
+* `control_variate=True` reduces the variance of the gradient estimates for binary labels and is recommended when there are many labels.
+* `sigma_dim="vector"` lets each coordinate of the response have its own scale $\sigma(X)$ instead of a common one, for instance for a mixed response. `sigma_min` is the lower bound of the scale on the discrete coordinates. It caps the probability of an interior level of an ordinal variable, at 98.8% with the default 0.2.
+* `classification=True` is obsolete and gives a warning. It is a different model, in which the network outputs class probabilities; for a categorical response, use `data_type="multiclass"` instead.
+
 
 ## Contact information
 If you meet any problems with the code, please submit an issue or contact [Xinwei Shen](mailto:xwshen@uw.edu).
