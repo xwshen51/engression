@@ -63,6 +63,25 @@ def get_act_func(name):
         return None
 
 
+def independent_layers(make_layer, num_layer):
+    """A sequence of layers, each made by a separate call of `make_layer` and hence with its own parameters.
+
+    Args:
+        make_layer (callable): function without arguments that returns a new layer.
+        num_layer (int): number of layers.
+
+    Returns:
+        nn.Sequential: the layers.
+
+    The first layer is made even when num_layer = 0: versions up to 0.1.15 made one layer and repeated it, so that
+    the layers shared their parameters, and made it also when no layer was used. Making it in any case keeps the
+    initialization of the layers made afterwards, and hence a fit with a fixed seed, as before when num_layer <= 1.
+    """
+    layers = [make_layer()]
+    layers += [make_layer() for _ in range(num_layer - 1)]
+    return nn.Sequential(*layers[:max(num_layer, 0)])
+
+
 class StoResBlock(nn.Module):
     """A stochastic residual net block.
 
@@ -351,14 +370,14 @@ class StoNet(StoNetBase):
                                                noise_dim=noise_dim, add_bn=add_bn, out_act="relu")
                 if not noise_all_layer:
                     noise_dim = 0
-                self.inter_layer = nn.Sequential(*[StoResBlock(dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(self.num_blocks - 2))
+                self.inter_layer = independent_layers(lambda: StoResBlock(dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu"), self.num_blocks - 2)
                 self.out_layer = StoResBlock(dim=hidden_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
                                              noise_dim=noise_dim, add_bn=add_bn, out_act=out_act) # output layer with concatinated noise
         else:
             self.input_layer = StoLayer(in_dim=in_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu", verbose=verbose)
             if not noise_all_layer:
                 noise_dim = 0
-            self.inter_layer = nn.Sequential(*[StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu")]*(num_layer - 2))
+            self.inter_layer = independent_layers(lambda: StoLayer(in_dim=hidden_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu"), num_layer - 2)
             # self.out_layer = StoLayer(in_dim=hidden_dim, out_dim=out_dim, noise_dim=noise_dim, add_bn=False, out_act=out_act) # output layer with concatinated noise
             self.out_layer = nn.Linear(hidden_dim, out_dim, bias=out_bias)
             if self.out_act is not None:
@@ -512,7 +531,7 @@ class ResMLP(nn.Module):
         else:
             self.input_layer = StoResBlock(dim=in_dim, hidden_dim=hidden_dim, out_dim=hidden_dim, 
                                            noise_dim=0, add_bn=add_bn, out_act="relu")
-            self.inter_layer = nn.Sequential(*[StoResBlock(dim=hidden_dim, noise_dim=0, add_bn=add_bn, out_act="relu")]*(self.num_blocks - 2))
+            self.inter_layer = independent_layers(lambda: StoResBlock(dim=hidden_dim, noise_dim=0, add_bn=add_bn, out_act="relu"), self.num_blocks - 2)
             self.out_layer = StoResBlock(dim=hidden_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
                                          noise_dim=0, add_bn=add_bn, out_act=out_act)
 
