@@ -65,3 +65,24 @@ def test_classification_sample():
         assert y_samples.shape == ((7, 4, sample_size) if sample_size > 1 else (7, 4))
         assert torch.allclose(y_samples.sum(dim=1), torch.ones(1))
     assert engressor.predict(x[:7]).shape == (7, 4)
+
+
+def test_eval_loss_verbose():
+    """eval_loss(verbose=True) used to fail for the losses other than the energy loss."""
+    x, y = simulate()
+    engressor = engression(x, y, num_epochs=5, verbose=False)
+    for loss_type in ["l2", "l1", "cor"]:
+        assert isinstance(engressor.eval_loss(x, y, loss_type=loss_type, verbose=True), float)
+    loss = engressor.eval_loss(x, y, loss_type="energy", verbose=True)
+    assert len(loss) == 3 and loss[0] == pytest.approx(loss[1] - loss[2] / 2)
+
+
+@pytest.mark.parametrize("beta", [0.5, 1, 1.5])
+def test_training_loss_with_beta(beta):
+    """The training loss reported after fitting is the energy loss with the beta of the fit; it used beta = 1."""
+    x, y = simulate()
+    engressor = engression(x, y, beta=beta, num_epochs=5, verbose=False)
+    torch.manual_seed(1)
+    engressor.train(x, y, num_epochs=0, verbose=False)
+    torch.manual_seed(1)
+    assert engressor.tr_loss == pytest.approx(engressor.eval_loss(x, y, loss_type="energy", beta=beta, verbose=True), rel=1e-5)

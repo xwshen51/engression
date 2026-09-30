@@ -272,7 +272,7 @@ class Engressor(object):
         # Evaluate performance on the training data (on the original scale)
         self.model.eval()
         x, y = self.unstandardize_data(y, x)
-        self.tr_loss = self.eval_loss(x, y, loss_type="energy", verbose=True)
+        self.tr_loss = self.eval_loss(x, y, loss_type="energy", beta=self.beta, verbose=True)
         
         if verbose:
             print("\nTraining loss on the original (non-standardized) scale:\n" +
@@ -364,11 +364,12 @@ class Engressor(object):
             x (torch.Tensor): data of predictors.
             y (torch.Tensor): data of responses.
             loss_type (str, optional): loss type. Defaults to "l2". Choices: ["l2", "l1", "energy", "cor"].
-            sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
+            sample_size (int, optional): generated sample sizes for each x. Defaults to 2 for the energy loss and 100 otherwise.
             beta (float, optional): beta in energy score. Defaults to 1.
+            verbose (bool, optional): whether to return also the two terms of the energy loss. Defaults to False.
         
         Returns:
-            float: evaluation loss.
+            float: evaluation loss, or for the energy loss with verbose=True, a tuple of the loss and its two terms.
         """
         if sample_size is None:
             sample_size = 2 if loss_type == "energy" else 100
@@ -390,7 +391,7 @@ class Engressor(object):
             assert loss_type == "energy"
             y_samples = self.sample(x, sample_size=sample_size, expand_dim=False)
             loss = energy_loss(y, y_samples, beta=beta, verbose=verbose)
-        if not verbose:
+        if not verbose or loss_type != "energy":
             return loss.item()
         else:
             loss, loss1, loss2 = loss
