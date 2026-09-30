@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
-def make_dataloader(x, y=None, batch_size=128, shuffle=True, num_workers=0):
+def make_dataloader(x, y=None, batch_size=128, shuffle=True, num_workers=0, drop_last=False):
     """Make dataloader.
 
     Args:
@@ -10,6 +10,7 @@ def make_dataloader(x, y=None, batch_size=128, shuffle=True, num_workers=0):
         batch_size (int, optional): batch size. Defaults to 128.
         shuffle (bool, optional): whether to shuffle data. Defaults to True.
         num_workers (int, optional): number of workers. Defaults to 0.
+        drop_last (bool, optional): whether to leave out the last batch if it is smaller than batch_size. Defaults to False.
 
     Returns:
         DataLoader: data loader
@@ -18,7 +19,7 @@ def make_dataloader(x, y=None, batch_size=128, shuffle=True, num_workers=0):
         dataset = TensorDataset(x)
     else:
         dataset = TensorDataset(x, y)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, drop_last=drop_last)
     return dataloader
 
 def partition_data(x_full, y_full, cut_quantile=0.3, split_train="smaller"):

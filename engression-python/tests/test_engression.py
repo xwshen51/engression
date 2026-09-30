@@ -93,3 +93,11 @@ def test_print_times_per_epoch(capsys):
     x, y = simulate(n=200)
     engression(x, y, num_epochs=2, batch_size=50, print_every_nepoch=1, print_times_per_epoch=4)
     assert capsys.readouterr().out.count("[Epoch 2 (50%), batch") == 4
+
+
+@pytest.mark.parametrize("resblock", [False, True])
+def test_batch_norm_last_batch_of_one(resblock):
+    """With batch normalization, mini-batch training used to fail when the last batch had one observation."""
+    x, y = simulate(n=201)
+    engressor = engression(x, y, num_layer=4, resblock=resblock, num_epochs=2, batch_size=50, verbose=False)
+    assert engressor.add_bn and all(torch.isfinite(torch.tensor(engressor.tr_loss)))

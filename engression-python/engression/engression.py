@@ -258,7 +258,9 @@ class Engressor(object):
                     print("[Epoch {} ({:.0f}%)] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
                         epoch_idx + 1, 100 * epoch_idx / self.num_epochs, loss.item(), loss1.item(), loss2.item()))
         else:
-            train_loader = make_dataloader(x, y, batch_size=batch_size, shuffle=True)
+            # Batch normalization needs more than one observation in a batch, so a last batch of one is left out.
+            train_loader = make_dataloader(x, y, batch_size=batch_size, shuffle=True, 
+                                           drop_last=self.add_bn and x.size(0) % batch_size == 1)
             if verbose:
                 print("Training based on mini-batch gradient descent with a batch size of {}.".format(batch_size))
             for epoch_idx in range(self.num_epochs):
