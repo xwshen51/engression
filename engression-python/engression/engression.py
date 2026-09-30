@@ -153,8 +153,8 @@ class Engressor(object):
             self.y_std = torch.std(y, dim=0)
             self.y_std[self.y_std == 0] += 1e-5
         else:
-            self.y_mean = torch.zeros(y.shape[1:], device=y.device).unsqueeze(0)
-            self.y_std = torch.ones(y.shape[1:], device=y.device).unsqueeze(0)
+            self.y_mean = torch.zeros(y.shape[1:], device=y.device)
+            self.y_std = torch.ones(y.shape[1:], device=y.device)
         x_standardized = (x - self.x_mean) / self.x_std
         y_standardized = (y - self.y_mean) / self.y_std
         self.x_mean = self.x_mean.to(self.device)
