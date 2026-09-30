@@ -42,7 +42,7 @@ devtools::install_github("xwshen51/engression", subdir = "engression-r")
 ## Usage Example
 
 ### Python
-Below is one simple demonstration. See [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_simu.ipynb) for more details on simulated data and [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_air.ipynb) for a real data example. We demonstrate in [another tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_bag.ipynb) how to fit a bagged engression model, which also helps with hyperparameter tuning.
+Below is one simple demonstration. See [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_simu.ipynb) for more details on simulated data and [this tutorial](https://github.com/xwshen51/engression/blob/main/engression-python/examples/example_air.ipynb) for a real data example.
 ```python
 from engression import engression
 from engression.data.simulator import preanm_simulator
