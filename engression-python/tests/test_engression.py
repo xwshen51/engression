@@ -101,3 +101,17 @@ def test_batch_norm_last_batch_of_one(resblock):
     x, y = simulate(n=201)
     engressor = engression(x, y, num_layer=4, resblock=resblock, num_epochs=2, batch_size=50, verbose=False)
     assert engressor.add_bn and all(torch.isfinite(torch.tensor(engressor.tr_loss)))
+
+
+def test_plot_save(tmp_path):
+    """plot(save_dir=...) used to make a folder at the path of the figure and then fail to save it; with training 
+    data, it also failed for a one-dimensional response."""
+    plt = pytest.importorskip("matplotlib.pyplot")
+    plt.switch_backend("Agg")
+    x, y = simulate()
+    engressor = engression(x, y[:, :1], num_epochs=2, verbose=False)
+    path = tmp_path / "figures" / "fit.png"
+    engressor.plot(x[:50], y[:50, 0], x_tr=x[50:100], y_tr=y[50:100, 0], save_dir=str(path))
+    assert path.is_file()
+    engressor.plot(x[:50], y[:50, :1], target="sample", sample_size=2, save_dir=str(tmp_path / "samples.png"))
+    assert (tmp_path / "samples.png").is_file()

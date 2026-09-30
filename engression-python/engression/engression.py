@@ -1,3 +1,4 @@
+import os
 import torch
 import matplotlib.pyplot as plt
 
@@ -414,7 +415,7 @@ class Engressor(object):
             y_idx (int, optional): index of the response to plot (if there are multiple). Defaults to 0.
             target (str or float, optional): target quantity. Defaults to "mean". Choice: ["mean", "median", "sample", float].
             sample_size (int, optional): generated sample sizes for each x. Defaults to 100.
-            save_dir (str, optional): directory to save the plot. Defaults to None.
+            save_dir (str, optional): path of the file to save the plot to; its folder is created if needed. Defaults to None.
             alpha (float, optional): transparency of the sampled data points. Defaults to 0.8.
             ymin (float, optional): minimum value of y in the plot. Defaults to None.
             ymax (float, optional): maximum value of y in the plot. Defaults to None.
@@ -423,6 +424,8 @@ class Engressor(object):
             # Plot training data as well.
             x_tr = vectorize(x_tr)
             y_tr = vectorize(y_tr)
+            x_te = vectorize(x_te)
+            y_te = vectorize(y_te)
             plt.scatter(x_tr[:,x_idx].cpu(), y_tr[:,y_idx].cpu(), s=1, label="training data", color="silver")
             plt.scatter(x_te[:,x_idx].cpu(), y_te[:,y_idx].cpu(), s=1, label="test data", color="gold")
             x = torch.cat((x_tr, x_te), dim=0)
@@ -455,7 +458,8 @@ class Engressor(object):
         else:
             plt.ylabel(r"$y_{}$".format(y_idx))
         if save_dir is not None:
-            make_folder(save_dir)
+            if os.path.dirname(save_dir) != "":
+                make_folder(os.path.dirname(save_dir))
             plt.savefig(save_dir, bbox_inches="tight")
             plt.close()
         else:
