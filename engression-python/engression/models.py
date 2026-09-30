@@ -316,10 +316,12 @@ class StoNetBase(nn.Module):
                 samples = self.sample_batch(x, sample_size, expand_dim, batch_size)
                 break
             except RuntimeError as e:
-                if "out of memory" in str(e):
+                if "out of memory" in str(e) and batch_size > 1:
                     batch_size = batch_size // 2
                     if verbose:
                         print("Out of memory; reduce the batch size to {}".format(batch_size))
+                else:
+                    raise
         return samples
     
     

@@ -1,3 +1,5 @@
+import signal
+
 import pytest
 import torch
 import torch.nn as nn
@@ -80,3 +82,18 @@ def test_weights_of_earlier_versions_load():
     torch.manual_seed(1)
     assert torch.equal(y, model_tied(x))
 
+
+@pytest.mark.skipif(not hasattr(signal, "SIGALRM"), reason="needs signal.alarm")
+def test_sample_raises_errors():
+    """An error in the forward pass other than running out of memory is raised; `sample` used to retry forever."""
+    model = StoNet(3, 2, hidden_dim=16, noise_dim=4)
+
+    def alarm(signum, frame):
+        raise TimeoutError("`sample` did not return.")
+    signal.signal(signal.SIGALRM, alarm)
+    signal.alarm(20)
+    try:
+        with pytest.raises(RuntimeError):
+            model.sample(torch.randn(7, 3).double(), sample_size=2)
+    finally:
+        signal.alarm(0)
