@@ -41,7 +41,7 @@ def engression(x, y, classification=False,
     """
     if x.shape[0] != y.shape[0]:
         raise Exception("The sample sizes for the covariates and response do not match. Please check.")
-    engressor = Engressor(in_dim=x.shape[1], out_dim=y.shape[1], classification=classification, 
+    engressor = Engressor(in_dim=vectorize(x).shape[1], out_dim=vectorize(y).shape[1], classification=classification, 
                           num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
                           out_act=out_act, resblock=resblock, add_bn=add_bn, beta=beta,
                           lr=lr, num_epochs=num_epochs, batch_size=batch_size, 

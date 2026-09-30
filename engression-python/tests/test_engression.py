@@ -115,3 +115,21 @@ def test_plot_save(tmp_path):
     assert path.is_file()
     engressor.plot(x[:50], y[:50, :1], target="sample", sample_size=2, save_dir=str(tmp_path / "samples.png"))
     assert (tmp_path / "samples.png").is_file()
+
+
+def test_data_with_more_dimensions():
+    """engression() used to build the network for the size of the second dimension of x and y, whereas Engressor.train
+    flattens all dimensions after the first, so that the network had the wrong numbers of inputs and outputs."""
+    x, y = simulate()
+    x3, y3 = x.repeat(1, 2).view(-1, 2, 3), y.view(-1, 1, 2)
+    engressor = engression(x3, y3, num_epochs=2, verbose=False)
+    assert (engressor.model.in_dim, engressor.model.out_dim) == (6, 2)
+    assert engressor.predict(x3[:7]).shape == (7, 2)
+
+
+def test_one_dimensional_data():
+    """engression() used to fail for a one-dimensional x or y, which Engressor.train accepts."""
+    x, y = simulate()
+    engressor = engression(x[:, 0], y[:, 0], num_epochs=2, verbose=False)
+    assert engressor.predict(x[:7, 0]).shape == (7, 1)
+    assert engressor.sample(x[:7, 0], sample_size=3).shape == (7, 1, 3)
