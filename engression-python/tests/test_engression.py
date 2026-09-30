@@ -1,3 +1,4 @@
+"""Tests of engression for continuous responses, which generalized engression must leave unchanged."""
 import pytest
 import torch
 
@@ -18,12 +19,14 @@ def simulate(n=300, seed=0):
 @pytest.mark.parametrize("num_layer", [2, 3])
 @pytest.mark.parametrize("batch_size", [None, 50])
 @pytest.mark.parametrize("add_bn", [True, False])
-def test_training_unchanged(num_layer, batch_size, add_bn):
+@pytest.mark.parametrize("data_type", [None, "continuous"])
+def test_training_unchanged(num_layer, batch_size, add_bn, data_type):
     """The fit is identical to that of the training procedure of version 0.1.15, written out below."""
     x, y = simulate()
     torch.manual_seed(0)
     engressor = engression(x, y, num_layer=num_layer, hidden_dim=32, noise_dim=8, add_bn=add_bn, lr=1e-3,
-                           num_epochs=5, batch_size=batch_size, verbose=False)
+                           num_epochs=5, batch_size=batch_size, data_type=data_type, verbose=False)
+    assert type(engressor.model) is StoNet
 
     torch.manual_seed(0)
     model = StoNet(3, 2, num_layer, 32, 8, add_bn, None, False)
@@ -265,3 +268,14 @@ def test_one_layer(capsys):
     assert capsys.readouterr().out == ""
     state = two.model.state_dict()
     assert all(torch.equal(value, state[key]) for key, value in one.model.state_dict().items())
+
+
+def test_engressor_saved_by_earlier_version():
+    """Attributes added for generalized engression have defaults for objects created by earlier versions."""
+    x, y = simulate()
+    engressor = engression(x, y, num_epochs=2, verbose=False)
+    for name in ["data_type", "blocks", "is_gem", "sigma_dim", "sigma_min", "control_variate", "y_zero_one"]:
+        delattr(engressor, name)
+    assert engressor.predict(x[:7]).shape == (7, 2)
+    assert engressor.sample(x[:7], sample_size=3).shape == (7, 2, 3)
+    assert isinstance(engressor.eval_loss(x, y, loss_type="energy"), float)

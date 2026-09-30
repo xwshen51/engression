@@ -5,28 +5,33 @@ import matplotlib.pyplot as plt
 
 from .loss_func import *
 from .models import StoNet
+from .gem import GEMNet, gem_loss_two_sample
+from .links import parse_data_type, is_continuous, check_response, encode_response, decode_response
 from .data.loader import make_dataloader
 from .utils import *
 
 
 def engression(x, y, classification=False,
-               num_layer=2, hidden_dim=100, noise_dim=100, out_act=None,
-               add_bn=True, resblock=False, beta=1,
+               num_layer=2, hidden_dim=100, noise_dim=None, out_act=None,
+               add_bn=None, resblock=False, beta=1,
                lr=0.0001, num_epochs=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
                device="cpu", standardize=True, verbose=True,
-               x_val=None, y_val=None):
+               x_val=None, y_val=None,
+               data_type=None, sigma_dim="scalar", sigma_min=0.2, control_variate=False):
     """This function fits an engression model to the data. It allows multivariate predictors and response variables. Variables are per default internally standardized (training with standardized data, while predictions and evaluations are on original scale).
+
+    For a response that is not continuous, specified by `data_type`, it fits a generalized engression model (GEM).
 
     Args:
         x (torch.Tensor): training data of predictors. A numpy array or a tensor of another numeric type is converted to a float32 tensor, here and in the other functions.
-        y (torch.Tensor): training data of responses.
+        y (torch.Tensor): training data of responses. See `data_type` for the coding of responses that are not continuous.
         classification (bool, optional): classification or not.
         num_layer (int, optional): number of (linear) layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
-        noise_dim (int, optional): noise dimension. Defaults to 100.
+        noise_dim (int, optional): noise dimension. Defaults to None, referring to 100 for a continuous response and to the dimension of the response otherwise.
         out_act (str, optional): output activation function. It acts on the original scale of the response, which is therefore not standardized, as for classification. Defaults to None.
-        add_bn (bool, optional): whether to add BN layer. Defaults to True.
+        add_bn (bool, optional): whether to add BN layer. Defaults to None, referring to True for a continuous response and to False otherwise.
         resblock (bool, optional): whether to use residual blocks (skip connections). Defaults to False.
         beta (float, optional): power parameter in the energy loss.
         lr (float, optional): learning rate. Defaults to 0.0001.
@@ -38,7 +43,19 @@ def engression(x, y, classification=False,
         standardize (bool, optional):  whether to standardize data during training. Defaults to True.
         verbose (bool, optional): whether to print losses and info. Defaults to True.
         x_val (torch.Tensor, optional): validation data of predictors. Defaults to None.
-        y_val (torch.Tensor, optional): validation data of responses. With validation data, the energy loss on them is computed about every 50 iterations, at the end of an epoch, and after the last epoch, and the parameters with the lowest loss are kept. Defaults to None.
+        y_val (torch.Tensor, optional): validation data of responses, coded as y. With validation data, the energy loss on them is computed about every 50 iterations, at the end of an epoch, and after the last epoch, and the parameters with the lowest loss are kept. Defaults to None.
+        data_type (str, dict or list, optional): data type of the response. Defaults to None, referring to a continuous response.
+            - str: one data type for all columns of y. Choices:
+                "continuous": real values;
+                "multilabel": binary labels, all coded as 0/1 or all as -1/+1;
+                "multiclass": one categorical variable, coded as indicator (one-hot) vectors;
+                "ordinal:L": ordinal variables with L levels, coded as 1, ..., L;
+                "ranking": a ranking of the columns of y, coded as the rank vector whose i-th entry is the position of item i (1 for the top item).
+            - dict: a mixed response, with the data types as keys and the first column of each block as values, e.g. {"continuous": 0, "multilabel": 7, "multiclass": 12}.
+            - list: the same as (data type, first column) pairs, for a data type that appears more than once.
+        sigma_dim (str, optional): "scalar" for a scale of the perturbation common to all coordinates of the response or "vector" for coordinate-wise scales. Only used when the response is not continuous. Defaults to "scalar".
+        sigma_min (float, optional): lower bound of the scale of the perturbation on the discrete coordinates of the response, which keeps the gradient estimates stable. Defaults to 0.2.
+        control_variate (bool, optional): whether to use the control variate for binary labels, which reduces the variance of the gradient estimates when there are many labels. Defaults to False.
 
     Returns:
         Engressor object: a fitted engression model.
@@ -51,7 +68,8 @@ def engression(x, y, classification=False,
                           num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
                           out_act=out_act, resblock=resblock, add_bn=add_bn, beta=beta,
                           lr=lr, num_epochs=num_epochs, batch_size=batch_size, 
-                          standardize=standardize, device=device, check_device=verbose, verbose=verbose)
+                          standardize=standardize, device=device, check_device=verbose, verbose=verbose,
+                          data_type=data_type, sigma_dim=sigma_dim, sigma_min=sigma_min, control_variate=control_variate)
     engressor.train(x, y, num_epochs=num_epochs, batch_size=batch_size, 
                     print_every_nepoch=print_every_nepoch, print_times_per_epoch=print_times_per_epoch, 
                     standardize=standardize, verbose=verbose, x_val=x_val, y_val=y_val)
@@ -67,10 +85,10 @@ class Engressor(object):
         classification (bool, optional): classification or not.
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
-        noise_dim (int, optional): noise dimension. Defaults to 100.
+        noise_dim (int, optional): noise dimension. Defaults to None, referring to 100 for a continuous response and to the dimension of the response otherwise.
         out_act (str, optional): output activation function. It acts on the original scale of the response, which is therefore not standardized, as for classification. Defaults to None.
         resblock (bool, optional): whether to use residual blocks (skip-connections). Defaults to False.
-        add_bn (bool, optional): whether to add BN layer. Defaults to True.
+        add_bn (bool, optional): whether to add BN layer. Defaults to None, referring to True for a continuous response and to False otherwise.
         beta (float, optional): power parameter in the energy loss.
         lr (float, optional): learning rate. Defaults to 0.0001.
         num_epochs (int, optional): number of epochs. Defaults to 500.
@@ -78,17 +96,39 @@ class Engressor(object):
         standardize (bool, optional): whether to standardize data during training. Defaults to True.
         device (str or torch.device, optional): device. Defaults to "cpu". Choices = ["cpu", "gpu", "cuda"].
         check_device (bool, optional): whether to check the device. Defaults to True.
+        data_type (str, dict or list, optional): data type of the response; see `engression`. Defaults to None, referring to a continuous response.
+        sigma_dim (str, optional): "scalar" for a scale of the perturbation common to all coordinates of the response or "vector" for coordinate-wise scales. Defaults to "scalar".
+        sigma_min (float, optional): lower bound of the scale of the perturbation on the discrete coordinates of the response. Defaults to 0.2.
+        control_variate (bool, optional): whether to use the control variate for binary labels. Defaults to False.
     """
+    # whether the model is a generalized engression model; defined here so that models saved by earlier versions can be loaded
+    is_gem = False
     # epoch of the parameters kept by validation; defined here so that models saved by earlier versions can be loaded
     best_epoch = None
 
     def __init__(self, 
                  in_dim, out_dim, classification=False,
-                 num_layer=2, hidden_dim=100, noise_dim=100, 
-                 out_act=False, resblock=False, add_bn=True, beta=1,
+                 num_layer=2, hidden_dim=100, noise_dim=None, 
+                 out_act=False, resblock=False, add_bn=None, beta=1,
                  lr=0.0001, num_epochs=500, batch_size=None, standardize=True, 
-                 device="cpu", check_device=True, verbose=True): 
+                 device="cpu", check_device=True, verbose=True,
+                 data_type=None, sigma_dim="scalar", sigma_min=0.2, control_variate=False):
         super().__init__()
+        if isinstance(classification, (str, dict, list)):
+            raise ValueError("The data type of the response is specified by `data_type`, e.g. data_type='{}'.".format(classification))
+        self.data_type = data_type
+        self.blocks = parse_data_type(data_type, out_dim)
+        self.is_gem = any(block.name != "continuous" for block in self.blocks)
+        if self.is_gem and (classification or out_act):
+            raise ValueError("`classification` and `out_act` are not used with `data_type`: the data type sets the link from the output of the network to the response.")
+        if noise_dim is None:
+            noise_dim = out_dim if self.is_gem else 100
+        if add_bn is None:
+            add_bn = not self.is_gem
+        self.sigma_dim = sigma_dim
+        self.sigma_min = sigma_min
+        self.control_variate = control_variate
+        self.y_zero_one = None
         self.classification = classification
         if classification:
             out_act = "softmax"
@@ -118,7 +158,10 @@ class Engressor(object):
         self.y_mean = None
         self.y_std = None
         
-        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, out_act, resblock).to(self.device)
+        if self.is_gem:
+            self.model = GEMNet(in_dim, out_dim, self.blocks, num_layer, hidden_dim, noise_dim, add_bn, resblock, sigma_dim, sigma_min).to(self.device)
+        else:
+            self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, out_act, resblock).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.verbose = verbose
         
@@ -143,6 +186,11 @@ class Engressor(object):
               "\t standardization: {}\n".format(self.standardize) +
               "\t training mode: {}\n".format(self.model.training) +
               "\t device: {}\n".format(self.device))
+        if self.is_gem:
+            print("Generalized engression model with\n" +
+                  "\t data type: {}\n".format(self.data_type) +
+                  "\t scale of the perturbation: {}, at least {} on discrete coordinates\n".format(self.sigma_dim, self.sigma_min) +
+                  "\t control variate: {}\n".format(self.control_variate))
         if self.best_epoch is not None:
             print("Validation:\n" +
                   "\t parameters kept from epoch {}, with the lowest energy loss on the validation data\n".format(self.best_epoch))
@@ -170,6 +218,11 @@ class Engressor(object):
             self.y_mean = torch.mean(y, dim=0)
             self.y_std = torch.std(y, dim=0)
             self.y_std[self.y_std == 0] += 1e-5
+            if self.is_gem:
+                # Only the continuous columns of the response are standardized.
+                discrete = ~is_continuous(self.blocks, device=y.device)
+                self.y_mean[discrete] = 0
+                self.y_std[discrete] = 1
         else:
             self.y_mean = torch.zeros(y.shape[1:], device=y.device)
             self.y_std = torch.ones(y.shape[1:], device=y.device)
@@ -225,6 +278,43 @@ class Engressor(object):
             else:
                 return x, y
         
+    def encode_response(self, y, training=True):
+        """Check the coding of the responses of a generalized engression model and code the binary labels as -1/+1 for training.
+
+        Args:
+            y (torch.Tensor): data of responses.
+            training (bool, optional): whether y is the training data, whose coding of the binary labels (0/1 or -1/+1) is recorded; 
+                other data must be coded in the same way. Defaults to True.
+
+        Returns:
+            torch.Tensor: responses with binary labels coded as -1/+1.
+        """
+        if not y.is_floating_point():
+            y = y.float()
+        zero_one = check_response(y, self.blocks)
+        if training:
+            self.y_zero_one = zero_one.to(self.device)
+            return encode_response(y, zero_one)
+        y = encode_response(y, self.y_zero_one.to(y.device))
+        for block in self.blocks:
+            if block.name == "multilabel" and not (y[:, block.start:block.end].abs() == 1).all():
+                raise ValueError("The binary labels of the validation data must be coded as those of the training data, as 0/1 or as -1/+1.")
+        return y
+
+    def decode_response(self, y):
+        """Transform the binary labels back to the coding of the training data (0/1 or -1/+1), for a generalized engression model.
+
+        Args:
+            y (torch.Tensor): responses or predictions with binary labels coded as -1/+1.
+
+        Returns:
+            torch.Tensor: responses or predictions in the coding of the training data.
+        """
+        if self.is_gem:
+            return decode_response(y, self.y_zero_one.to(y.device))
+        else:
+            return y
+
     def train(self, x, y, num_epochs=None, batch_size=None, lr=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=None, verbose=None,
               x_val=None, y_val=None):
         """Fit the model.
@@ -240,7 +330,7 @@ class Engressor(object):
             standardize (bool, optional): whether to standardize the data. Defaults to True.
             verbose (bool, optional): whether to print losses and info. Defaults to None, referring to the verbose argument of the Engressor.
             x_val (torch.Tensor, optional): validation data of predictors. Defaults to None.
-            y_val (torch.Tensor, optional): validation data of responses. With validation data, the energy loss on them is computed about every 50 iterations, at the end of an epoch, and after the last epoch, and the parameters with the lowest loss are kept. Defaults to None.
+            y_val (torch.Tensor, optional): validation data of responses, coded as y. With validation data, the energy loss on them is computed about every 50 iterations, at the end of an epoch, and after the last epoch, and the parameters with the lowest loss are kept. Defaults to None.
         """
         if (x_val is None) != (y_val is None):
             raise ValueError("Validation data need both `x_val` and `y_val`.")
@@ -269,6 +359,10 @@ class Engressor(object):
                 raise ValueError("The sample sizes of `x_val` and `y_val` do not match.")
             if x_val.size(1) != x.size(1) or y_val.size(1) != y.size(1):
                 raise ValueError("The validation data must have as many columns as the training data.")
+        if self.is_gem:
+            y = self.encode_response(y)
+            if x_val is not None:
+                y_val = self.encode_response(y_val, training=False)
         if self.standardize:
             if verbose:
                 print("Data is standardized for training only; the printed training losses are on the standardized scale. \n" +
@@ -287,10 +381,7 @@ class Engressor(object):
                 print("Batch is larger than half of the sample size. Training based on full-batch gradient descent.")
             for epoch_idx in range(self.num_epochs):
                 self.model.zero_grad()
-                y_sample1 = self.model(x)
-                y_sample2 = self.model(x)
-                loss, loss1, loss2 = energy_loss_two_sample(y, y_sample1, y_sample2, beta=self.beta, verbose=True)
-                loss.backward()
+                loss, loss1, loss2 = self.loss_backward(x, y)
                 self.optimizer.step()
                 if (epoch_idx == 0 or  (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                     print("[Epoch {} ({:.0f}%)] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
@@ -323,6 +414,7 @@ class Engressor(object):
         # Evaluate performance on the training data (on the original scale)
         self.model.eval()
         x, y = self.unstandardize_data(y, x)
+        y = self.decode_response(y)
         self.tr_loss = self.eval_loss(x, y, loss_type="energy", beta=self.beta, verbose=True)
         
         if verbose:
@@ -362,12 +454,31 @@ class Engressor(object):
         self.tr_loss1 = 0
         self.tr_loss2 = 0
     
+    def loss_backward(self, x, y):
+        """Compute the energy loss based on two samples from the model and its gradient.
+
+        Args:
+            x (torch.Tensor): data of predictors.
+            y (torch.Tensor): data of responses.
+
+        Returns:
+            torch.Tensor: energy loss and its two terms.
+        """
+        if self.is_gem:
+            draw1 = self.model(x, return_latent=True)
+            draw2 = self.model(x, return_latent=True)
+            surrogate, loss = gem_loss_two_sample(y, draw1, draw2, self.blocks, beta=self.beta, control_variate=self.control_variate)
+            surrogate.backward()
+        else:
+            y_sample1 = self.model(x)
+            y_sample2 = self.model(x)
+            loss = energy_loss_two_sample(y, y_sample1, y_sample2, beta=self.beta, verbose=True)
+            loss[0].backward()
+        return loss
+
     def train_one_iter(self, x_batch, y_batch):
         self.model.zero_grad()
-        y_sample1 = self.model(x_batch)
-        y_sample2 = self.model(x_batch)
-        loss, loss1, loss2 = energy_loss_two_sample(y_batch, y_sample1, y_sample2, beta=self.beta, verbose=True)
-        loss.backward()
+        loss, loss1, loss2 = self.loss_backward(x_batch, y_batch)
         self.optimizer.step()
         self.tr_loss += loss.item()
         self.tr_loss1 += loss1.item()
@@ -401,9 +512,9 @@ class Engressor(object):
         y_pred = self.model.predict(x, target, sample_size)
         if isinstance(y_pred, list):
             for i in range(len(y_pred)):
-                y_pred[i] = self.unstandardize_data(y_pred[i])
+                y_pred[i] = self.decode_response(self.unstandardize_data(y_pred[i]))
         else:
-            y_pred = self.unstandardize_data(y_pred)
+            y_pred = self.decode_response(self.unstandardize_data(y_pred))
         return y_pred
     
     @torch.no_grad()
@@ -426,6 +537,7 @@ class Engressor(object):
         x = self.standardize_data(x)
         y_samples = self.model.sample(x, sample_size, expand_dim=expand_dim)            
         y_samples = self.unstandardize_data(y_samples, expand_dim=expand_dim)
+        y_samples = self.decode_response(y_samples)
         if sample_size == 1 and expand_dim:
             y_samples = y_samples.squeeze(len(y_samples.shape) - 1)
         return y_samples
