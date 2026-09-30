@@ -86,3 +86,10 @@ def test_training_loss_with_beta(beta):
     engressor.train(x, y, num_epochs=0, verbose=False)
     torch.manual_seed(1)
     assert engressor.tr_loss == pytest.approx(engressor.eval_loss(x, y, loss_type="energy", beta=beta, verbose=True), rel=1e-5)
+
+
+def test_print_times_per_epoch(capsys):
+    """Mini-batch training used to fail when print_times_per_epoch exceeded the number of batches minus one."""
+    x, y = simulate(n=200)
+    engression(x, y, num_epochs=2, batch_size=50, print_every_nepoch=1, print_times_per_epoch=4)
+    assert capsys.readouterr().out.count("[Epoch 2 (50%), batch") == 4

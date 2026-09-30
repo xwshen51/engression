@@ -266,7 +266,7 @@ class Engressor(object):
                 for batch_idx, (x_batch, y_batch) in enumerate(train_loader):
                     self.train_one_iter(x_batch, y_batch)
                     if (epoch_idx == 0 or (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
-                        if (batch_idx + 1) % ((len(train_loader) - 1) // print_times_per_epoch) == 0:
+                        if (batch_idx + 1) % max(1, (len(train_loader) - 1) // print_times_per_epoch) == 0:
                             self.print_loss(epoch_idx, batch_idx)
 
         # Evaluate performance on the training data (on the original scale)
