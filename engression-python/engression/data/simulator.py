@@ -4,7 +4,7 @@ import numpy as np
 
 
 def preanm_simulator(true_function="softplus", n=10000, x_lower=0, x_upper=2, noise_std=1, noise_dist="gaussian", train=True, device=torch.device("cpu")):
-    """Data simulator for a pre-additive noise model (pre-ANM).
+    r"""Data simulator for a pre-additive noise model (pre-ANM).
 
     Args:
         true_function (str, optional): true function g^\star. Defaults to "softplus". Choices: ["softplus", "cubic","square", "log"].
@@ -32,14 +32,16 @@ def preanm_simulator(true_function="softplus", n=10000, x_lower=0, x_upper=2, no
     if isinstance(device, str):
             device = torch.device(device)
             
-    if train:
-        x = torch.rand(n, 1)*(x_upper - x_lower) + x_lower
+    def noise(size):
         if noise_dist == "gaussian":
-            eps = torch.randn(n, 1)*noise_std
+            return torch.randn(size, 1)*noise_std
         else:
             assert noise_dist == "uniform"
-            eps = (torch.rand(n, 1) - 0.5)*noise_std*np.sqrt(12)
-        xn = x + eps
+            return (torch.rand(size, 1) - 0.5)*noise_std*np.sqrt(12)
+
+    if train:
+        x = torch.rand(n, 1)*(x_upper - x_lower) + x_lower
+        xn = x + noise(n)
         y = true_function(xn)
         return x.to(device), y.to(device)
     
@@ -48,7 +50,7 @@ def preanm_simulator(true_function="softplus", n=10000, x_lower=0, x_upper=2, no
         y_eval_med = true_function(x_eval)
         gen_sample_size = 10000
         x_rep = torch.repeat_interleave(x_eval, (gen_sample_size * torch.ones(n)).long(), dim=0)
-        x_rep = x_rep + torch.randn(x_rep.size(0), 1)*noise_std
+        x_rep = x_rep + noise(x_rep.size(0))
         y_eval_mean = true_function(x_rep)
         y_eval_mean = list(torch.split(y_eval_mean, gen_sample_size))
         y_eval_mean = torch.cat([y_eval_mean[i].mean().unsqueeze(0) for i in range(n)], dim=0).unsqueeze(1)
