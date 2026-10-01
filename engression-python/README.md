@@ -53,7 +53,7 @@ y_pred_quant = engressor.predict(x_eval, target=[0.025, 0.5, 0.975]) ## for the 
 
 
 ## Contact information
-If you meet any problems with the code, please submit an issue or contact [Xinwei Shen](mailto:xinwei.shen@stat.math.ethz.ch).
+If you meet any problems with the code, please submit an issue or contact [Xinwei Shen](mailto:xwshen@uw.edu).
 
 
 ## Citation

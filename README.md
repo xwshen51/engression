@@ -103,7 +103,7 @@ plot(Xtest[,1], Ysample, xlab="Variable 1", ylab="Sample from engression model")
 
 
 ## Contact information
-If you meet any problems with the code, please submit an issue or contact [Xinwei Shen](mailto:xinwei.shen@stat.math.ethz.ch).
+If you meet any problems with the code, please submit an issue or contact [Xinwei Shen](mailto:xwshen@uw.edu).
 
 
 ## Citation
