@@ -120,6 +120,14 @@ def test_cuda_not_available(capsys):
     assert capsys.readouterr().out == "Running on MPS.\n\n"
 
 
+def test_summary_before_training(capsys):
+    """summary() used to fail before training, for lack of a training loss to print."""
+    from engression.engression import Engressor
+    Engressor(in_dim=3, out_dim=2, check_device=False).summary()
+    out = capsys.readouterr().out
+    assert "Engression model with" in out and "Training loss" not in out
+
+
 def test_eval_loss_verbose():
     """eval_loss(verbose=True) used to fail for the losses other than the energy loss."""
     x, y = simulate()

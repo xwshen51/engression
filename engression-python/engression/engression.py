@@ -134,9 +134,10 @@ class Engressor(object):
               "\t standardization: {}\n".format(self.standardize) +
               "\t training mode: {}\n".format(self.model.training) +
               "\t device: {}\n".format(self.device))
-        print("Training loss (original scale):\n" +
-              "\t energy-loss: {:.2f}, \n\tE(|Y-Yhat|): {:.2f}, \n\tE(|Yhat-Yhat'|): {:.2f}".format(
-                  self.tr_loss[0], self.tr_loss[1], self.tr_loss[2]))
+        if self.tr_loss is not None:
+            print("Training loss (original scale):\n" +
+                  "\t energy-loss: {:.2f}, \n\tE(|Y-Yhat|): {:.2f}, \n\tE(|Yhat-Yhat'|): {:.2f}".format(
+                      self.tr_loss[0], self.tr_loss[1], self.tr_loss[2]))
         
     def _standardize_data_and_record_stats(self, x, y):
         """Standardize the data and record the mean and standard deviation of the training data.
