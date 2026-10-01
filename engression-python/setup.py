@@ -1,3 +1,4 @@
+import re
 from setuptools import setup, find_packages
 
 
@@ -6,11 +7,14 @@ with open('README.md') as f:
 
 with open('requirements.txt') as f:
     install_requires = [l.strip() for l in f]
+
+with open('engression/__init__.py') as f:
+    version = re.search(r'^__version__ = "(.+)"$', f.read(), re.M).group(1)
     
 
 setup(
     name='engression',
-    version='0.1.15',
+    version=version,
     description='Engression Modelling',
     url='https://github.com/xwshen51/engression',
     author='Xinwei Shen and Nicolai Meinshausen',

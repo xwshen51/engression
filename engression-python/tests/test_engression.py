@@ -242,3 +242,13 @@ def test_train_follows_verbose_of_engressor(capsys):
     assert capsys.readouterr().out == ""
     Engressor(3, 2, check_device=False).train(x, y, num_epochs=2)
     assert "Training loss" in capsys.readouterr().out
+
+
+def test_package_exports():
+    """`from engression import Engressor` used to fail, and the package had no version attribute."""
+    import importlib
+    import re
+    from engression.engression import Engressor
+    package = importlib.import_module("engression")
+    assert package.Engressor is Engressor
+    assert re.fullmatch(r"\d+\.\d+\.\d+", package.__version__)
