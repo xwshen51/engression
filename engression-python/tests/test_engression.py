@@ -67,6 +67,20 @@ def test_classification_sample():
     assert engressor.predict(x[:7]).shape == (7, 4)
 
 
+def test_sample_size_one(tmp_path):
+    """With sample_size=1, `sample` drops the dimension of the samples; with expand_dim=False, there is no such dimension,
+    and it used to drop that of a univariate response instead, so that plot(target="sample", sample_size=1) failed."""
+    x, y = simulate()
+    engressor = engression(x, y[:, :1], num_epochs=2, verbose=False)
+    assert engressor.sample(x[:7], sample_size=1).shape == (7, 1)
+    assert engressor.sample(x[:7], sample_size=1, expand_dim=False).shape == (7, 1)
+    assert engressor.sample(x[:7], sample_size=3, expand_dim=False).shape == (21, 1)
+    plt = pytest.importorskip("matplotlib.pyplot")
+    plt.switch_backend("Agg")
+    engressor.plot(x[:50], y[:50, :1], target="sample", sample_size=1, save_dir=str(tmp_path / "samples.png"))
+    assert (tmp_path / "samples.png").is_file()
+
+
 def test_eval_loss_verbose():
     """eval_loss(verbose=True) used to fail for the losses other than the energy loss."""
     x, y = simulate()

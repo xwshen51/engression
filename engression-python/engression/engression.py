@@ -355,7 +355,7 @@ class Engressor(object):
         x = self.standardize_data(x)
         y_samples = self.model.sample(x, sample_size, expand_dim=expand_dim)            
         y_samples = self.unstandardize_data(y_samples, expand_dim=expand_dim)
-        if sample_size == 1:
+        if sample_size == 1 and expand_dim:
             y_samples = y_samples.squeeze(len(y_samples.shape) - 1)
         return y_samples
     
