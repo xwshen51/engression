@@ -39,11 +39,17 @@ def energy_loss(x_true, x_est, beta=1, verbose=True):
     if not isinstance(x_est, list):
         x_est = list(torch.split(x_est, x_true.shape[0], dim=0))
     m = len(x_est)
+    if m < 2:
+        raise ValueError("The energy loss needs at least two samples for each data point.")
     x_est = [vectorize(x_est[i]).unsqueeze(1) for i in range(m)]
     x_est = torch.cat(x_est, dim=1)
         
     s1 = (_compute_norm(x_est - x_true, 2, dim=2) + EPS).pow(beta).mean()
-    s2 = (torch.cdist(x_est, x_est, 2) + EPS).pow(beta).mean() * m / (m - 1)
+    # The second term averages over the pairs of different samples. torch.cdist is kept from computing the distances by 
+    # a matrix product, as it would for more than 25 samples, since that loses precision for samples far from the origin.
+    s2 = (torch.cdist(x_est, x_est, 2, compute_mode="donot_use_mm_for_euclid_dist") + EPS).pow(beta).mean() * m / (m - 1)
+    if EPS > 0:
+        s2 = s2 - EPS ** beta / (m - 1)   # the pairs of a sample with itself, at distance 0, added EPS ** beta to the mean
     if verbose:
         return torch.cat([(s1 - s2 / 2).reshape(1), s1.reshape(1), s2.reshape(1)], dim=0)
     else:
