@@ -19,7 +19,7 @@ def engression(x, y, classification=False,
     """This function fits an engression model to the data. It allows multivariate predictors and response variables. Variables are per default internally standardized (training with standardized data, while predictions and evaluations are on original scale).
 
     Args:
-        x (torch.Tensor): training data of predictors.
+        x (torch.Tensor): training data of predictors. A numpy array or a tensor of another numeric type is converted to a float32 tensor, here and in the other functions.
         y (torch.Tensor): training data of responses.
         classification (bool, optional): classification or not.
         num_layer (int, optional): number of (linear) layers. Defaults to 2.
@@ -43,6 +43,8 @@ def engression(x, y, classification=False,
     Returns:
         Engressor object: a fitted engression model.
     """
+    x = to_tensor(x)
+    y = to_tensor(y)
     if x.shape[0] != y.shape[0]:
         raise Exception("The sample sizes for the covariates and response do not match. Please check.")
     engressor = Engressor(in_dim=vectorize(x).shape[1], out_dim=vectorize(y).shape[1], classification=classification, 
@@ -242,6 +244,8 @@ class Engressor(object):
         """
         if (x_val is None) != (y_val is None):
             raise ValueError("Validation data need both `x_val` and `y_val`.")
+        x = to_tensor(x)
+        y = to_tensor(y)
         self.train_mode()
         if num_epochs is not None:
             self.num_epochs = num_epochs
@@ -257,8 +261,8 @@ class Engressor(object):
         x = vectorize(x)
         y = vectorize(y)
         if x_val is not None:
-            x_val = vectorize(x_val)
-            y_val = vectorize(y_val)
+            x_val = vectorize(to_tensor(x_val))
+            y_val = vectorize(to_tensor(y_val))
             if x_val.size(0) != y_val.size(0):
                 raise ValueError("The sample sizes of `x_val` and `y_val` do not match.")
             if x_val.size(1) != x.size(1) or y_val.size(1) != y.size(1):
@@ -389,7 +393,7 @@ class Engressor(object):
             torch.Tensor or list of torch.Tensor: point predictions.
         """
         self.eval_mode()  
-        x = vectorize(x)
+        x = vectorize(to_tensor(x))
         x = x.to(self.device)
         x = self.standardize_data(x)
         y_pred = self.model.predict(x, target, sample_size)
@@ -415,7 +419,7 @@ class Engressor(object):
                 - [i,:,:] consists of all samples of x_i.
         """
         self.eval_mode()
-        x = vectorize(x)
+        x = vectorize(to_tensor(x))
         x = x.to(self.device)
         x = self.standardize_data(x)
         y_samples = self.model.sample(x, sample_size, expand_dim=expand_dim)            
@@ -442,8 +446,8 @@ class Engressor(object):
         if sample_size is None:
             sample_size = 2 if loss_type == "energy" else 100
         self.eval_mode()
-        x = vectorize(x)
-        y = vectorize(y)
+        x = vectorize(to_tensor(x))
+        y = vectorize(to_tensor(y))
         x = x.to(self.device)
         y = y.to(self.device)
         if loss_type == "l2":
@@ -487,18 +491,18 @@ class Engressor(object):
         """
         if x_tr is not None and y_tr is not None:
             # Plot training data as well.
-            x_tr = vectorize(x_tr)
-            y_tr = vectorize(y_tr)
-            x_te = vectorize(x_te)
-            y_te = vectorize(y_te)
+            x_tr = vectorize(to_tensor(x_tr))
+            y_tr = vectorize(to_tensor(y_tr))
+            x_te = vectorize(to_tensor(x_te))
+            y_te = vectorize(to_tensor(y_te))
             plt.scatter(x_tr[:,x_idx].cpu(), y_tr[:,y_idx].cpu(), s=1, label="training data", color="silver")
             plt.scatter(x_te[:,x_idx].cpu(), y_te[:,y_idx].cpu(), s=1, label="test data", color="gold")
             x = torch.cat((x_tr, x_te), dim=0)
             y = torch.cat((y_tr, y_te), dim=0)
         else:
             # Plot only the test data.
-            x_te = vectorize(x_te)
-            y_te = vectorize(y_te)
+            x_te = vectorize(to_tensor(x_te))
+            y_te = vectorize(to_tensor(y_te))
             plt.scatter(x_te[:,x_idx].cpu(), y_te[:,y_idx].cpu(), s=1, label="true data", color="silver")
             x = x_te
             y = y_te

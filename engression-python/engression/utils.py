@@ -1,6 +1,20 @@
 import os
 import contextlib
+import numpy as np
 import torch
+
+def to_tensor(x):
+    """Convert data to a tensor of the default floating-point type of PyTorch (float32 unless changed), which the networks use.
+
+    Args:
+        x (torch.Tensor, numpy.ndarray or array-like): data of any numeric type.
+
+    Returns:
+        torch.Tensor: data as a floating-point tensor, on the device of x if it is a tensor.
+    """
+    if not isinstance(x, torch.Tensor):
+        x = torch.as_tensor(np.ascontiguousarray(x))
+    return x.to(torch.get_default_dtype())
 
 def vectorize(x, multichannel=False):
     """Vectorize data in any shape.

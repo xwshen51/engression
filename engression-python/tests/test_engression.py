@@ -205,3 +205,28 @@ def test_one_dimensional_data():
     engressor = engression(x[:, 0], y[:, 0], num_epochs=2, verbose=False)
     assert engressor.predict(x[:7, 0]).shape == (7, 1)
     assert engressor.sample(x[:7, 0], sample_size=3).shape == (7, 1, 3)
+
+
+def test_numpy_and_other_numeric_types(tmp_path):
+    """Numpy arrays, lists and tensors of other numeric types are converted to float32 tensors; they used to raise errors."""
+    x, y = simulate()
+    y = y.round()
+    torch.manual_seed(0)
+    reference = engression(x, y, num_epochs=3, verbose=False)
+    torch.manual_seed(1)
+    predictions = reference.predict(x[:7])
+    for x_other, y_other in [(x.numpy(), y.numpy()), (x.double(), y.long()), (x.double().numpy(), y.int().numpy()), (x.tolist(), y.tolist())]:
+        torch.manual_seed(0)
+        engressor = engression(x_other, y_other, num_epochs=3, verbose=False)
+        state = engressor.model.state_dict()
+        assert all(torch.equal(value, state[key]) for key, value in reference.model.state_dict().items())
+        torch.manual_seed(1)
+        assert torch.equal(engressor.predict(x_other[:7]), predictions)
+        assert engressor.sample(x_other[:7], sample_size=3).shape == (7, 2, 3)
+        assert engressor.eval_loss(x_other, y_other, loss_type="energy") > 0
+    engressor = engression(x.numpy(), y[:, 0].numpy(), num_epochs=60, verbose=False, x_val=x[:50].numpy(), y_val=y[:50, 0].numpy())
+    assert engressor.best_epoch in [50, 60]
+    plt = pytest.importorskip("matplotlib.pyplot")
+    plt.switch_backend("Agg")
+    engressor.plot(x.numpy(), y[:, 0].numpy(), x_tr=x.numpy(), y_tr=y[:, 0].numpy(), save_dir=str(tmp_path / "plot.png"))
+    assert (tmp_path / "plot.png").exists()
