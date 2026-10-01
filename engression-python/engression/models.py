@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from .data.loader import make_dataloader
+from .utils import vectorize
 
 
 class StoLayer(nn.Module):    
@@ -240,13 +241,15 @@ class StoNetBase(nn.Module):
         """Compute the CDF evaluated at y, i.e. P(Y <= y | X=x), element-wise across response dimensions.
 
         Args:
-            x (torch.Tensor): covariates of shape (data_size, covariate_dim).
-            y (torch.Tensor): response values of shape (data_size, response_dim), the values at which to evaluate the CDF.
+            x (torch.Tensor): covariates of shape (data_size, covariate_dim), or (data_size,) for one covariate.
+            y (torch.Tensor): response values of shape (data_size, response_dim), or (data_size,) for one response, the values at which to evaluate the CDF.
             sample_size (int, optional): number of samples used to estimate the CDF. Defaults to 100.
 
         Returns:
             torch.Tensor of shape (data_size, response_dim): estimated CDF values in [0, 1], computed element-wise per response dimension.
         """
+        x = vectorize(x)
+        y = vectorize(y)
         # samples shape: (data_size, response_dim, sample_size)
         samples = self.sample(x=x, sample_size=sample_size, expand_dim=True)
         # proportion of samples <= y, element-wise across response dimensions

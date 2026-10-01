@@ -124,3 +124,13 @@ def test_sample_after_running_out_of_memory():
     assert samples.shape == (6, 1, 2) and samples_flat.shape == (12, 1)
     assert torch.equal(samples_flat, torch.cat([samples[:, :, 0], samples[:, :, 1]]))
     assert torch.allclose(samples_flat, x.repeat(2, 1), atol=5)
+
+
+def test_compute_cdf_one_dimensional():
+    """compute_cdf used to compare all samples with every value of a one-dimensional y, giving shape (n, n)."""
+    model = StoNet(1, 1, hidden_dim=16, noise_dim=4)
+    x, y = torch.randn(5, 1), torch.randn(5, 1)
+    torch.manual_seed(0)
+    cdf = model.compute_cdf(x, y, sample_size=20)
+    torch.manual_seed(0)
+    assert cdf.shape == (5, 1) and torch.equal(model.compute_cdf(x[:, 0], y[:, 0], sample_size=20), cdf)
