@@ -93,6 +93,21 @@ def test_output_activation():
     assert (y_samples >= 0).all() and (y_samples < y.mean()).float().mean() > 0.3
 
 
+def test_constant_covariate():
+    """A covariate that is constant in training is not scaled. Its standard deviation used to be set to 1e-5, so that
+    predictions at other values of the covariate blew up."""
+    x, y = simulate()
+    x[:, 2] = 0
+    engressor = engression(x, y, num_epochs=5, verbose=False)
+    assert engressor.x_std[2] == 1
+    x_new = x[:7].clone()
+    x_new[:, 2] = 1
+    torch.manual_seed(0)
+    y_pred = engressor.predict(x[:7])
+    torch.manual_seed(0)
+    assert (engressor.predict(x_new) - y_pred).abs().max() < 10
+
+
 def test_eval_loss_verbose():
     """eval_loss(verbose=True) used to fail for the losses other than the energy loss."""
     x, y = simulate()

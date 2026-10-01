@@ -148,7 +148,8 @@ class Engressor(object):
         """
         self.x_mean = torch.mean(x, dim=0)
         self.x_std = torch.std(x, dim=0)
-        self.x_std[self.x_std == 0] += 1e-5
+        # A covariate that is constant in training is centered but not scaled, so that other values of it stay moderate.
+        self.x_std[self.x_std == 0] = 1
         # An output activation acts on the original scale of the response, so that the response is not standardized.
         if not (self.classification or self.out_act):
             self.y_mean = torch.mean(y, dim=0)
