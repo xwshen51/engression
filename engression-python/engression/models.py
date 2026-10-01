@@ -382,6 +382,8 @@ class StoNet(StoNetBase):
                 self.out_layer = StoResBlock(dim=hidden_dim, hidden_dim=hidden_dim, out_dim=out_dim, 
                                              noise_dim=noise_dim, add_bn=add_bn, out_act=out_act) # output layer with concatinated noise
         else:
+            if num_layer < 2 and verbose:
+                print("A network has at least 2 layers: num_layer={} gives 2 layers, i.e. one hidden layer, as num_layer=2 does.".format(num_layer))
             self.input_layer = StoLayer(in_dim=in_dim, out_dim=hidden_dim, noise_dim=noise_dim, add_bn=add_bn, out_act="relu", verbose=verbose)
             if not noise_all_layer:
                 noise_dim = 0

@@ -252,3 +252,16 @@ def test_package_exports():
     package = importlib.import_module("engression")
     assert package.Engressor is Engressor
     assert re.fullmatch(r"\d+\.\d+\.\d+", package.__version__)
+
+
+def test_one_layer(capsys):
+    """num_layer=1 gives the network of num_layer=2, with 2 layers, i.e. one hidden layer, which is now printed."""
+    x, y = simulate()
+    torch.manual_seed(0)
+    one = engression(x, y, num_layer=1, num_epochs=2, verbose=False)
+    assert "num_layer=1 gives 2 layers, i.e. one hidden layer" in capsys.readouterr().out
+    torch.manual_seed(0)
+    two = engression(x, y, num_layer=2, num_epochs=2, verbose=False)
+    assert capsys.readouterr().out == ""
+    state = two.model.state_dict()
+    assert all(torch.equal(value, state[key]) for key, value in one.model.state_dict().items())
