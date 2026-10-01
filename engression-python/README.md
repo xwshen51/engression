@@ -51,6 +51,8 @@ y_pred_med = engressor.predict(x_eval, target="median") ## for the conditional m
 y_pred_quant = engressor.predict(x_eval, target=[0.025, 0.5, 0.975]) ## for the conditional 2.5% and 97.5% quantiles
 ```
 
+Validation data can be passed to choose the number of training iterations: `engression(x, y, x_val=x_val, y_val=y_val)` computes the energy loss on them about every 50 iterations and after the last epoch, and keeps the parameters with the lowest loss; `engressor.summary()` shows the epoch they come from.
+
 
 ## Contact information
 If you meet any problems with the code, please submit an issue or contact [Xinwei Shen](mailto:xwshen@uw.edu).

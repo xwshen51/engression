@@ -1,4 +1,5 @@
 import os
+import contextlib
 import torch
 
 def vectorize(x, multichannel=False):
@@ -65,3 +66,22 @@ def check_for_gpu(device):
             print("Warning: You have a CUDA device, so you may consider using GPU for potential acceleration\n by setting device to 'cuda'.\n")
         else:
             print("Running on CPU.\n")
+
+
+@contextlib.contextmanager
+def keep_rng_state(device):
+    """Restore the states of the random number generators of the CPU and of a CUDA device when leaving the context, 
+    so that the random numbers drawn in the context do not change those drawn after it. The generator of an MPS device 
+    is left alone, since some versions of PyTorch cannot restore its state.
+
+    Args:
+        device (torch.device): device.
+    """
+    cpu_state = torch.get_rng_state()
+    cuda_state = torch.cuda.get_rng_state(device) if device.type == "cuda" else None
+    try:
+        yield
+    finally:
+        torch.set_rng_state(cpu_state)
+        if cuda_state is not None:
+            torch.cuda.set_rng_state(cuda_state, device)

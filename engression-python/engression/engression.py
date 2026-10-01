@@ -1,4 +1,5 @@
 import os
+import copy
 import torch
 import matplotlib.pyplot as plt
 
@@ -13,7 +14,8 @@ def engression(x, y, classification=False,
                add_bn=True, resblock=False, beta=1,
                lr=0.0001, num_epochs=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
-               device="cpu", standardize=True, verbose=True): 
+               device="cpu", standardize=True, verbose=True,
+               x_val=None, y_val=None):
     """This function fits an engression model to the data. It allows multivariate predictors and response variables. Variables are per default internally standardized (training with standardized data, while predictions and evaluations are on original scale).
 
     Args:
@@ -35,6 +37,8 @@ def engression(x, y, classification=False,
         device (str, torch.device, optional): device. Defaults to "cpu". Choices = ["cpu", "gpu", "cuda"].
         standardize (bool, optional):  whether to standardize data during training. Defaults to True.
         verbose (bool, optional): whether to print losses and info. Defaults to True.
+        x_val (torch.Tensor, optional): validation data of predictors. Defaults to None.
+        y_val (torch.Tensor, optional): validation data of responses. With validation data, the energy loss on them is computed about every 50 iterations, at the end of an epoch, and after the last epoch, and the parameters with the lowest loss are kept. Defaults to None.
 
     Returns:
         Engressor object: a fitted engression model.
@@ -48,7 +52,7 @@ def engression(x, y, classification=False,
                           standardize=standardize, device=device, check_device=verbose, verbose=verbose)
     engressor.train(x, y, num_epochs=num_epochs, batch_size=batch_size, 
                     print_every_nepoch=print_every_nepoch, print_times_per_epoch=print_times_per_epoch, 
-                    standardize=standardize, verbose=verbose)
+                    standardize=standardize, verbose=verbose, x_val=x_val, y_val=y_val)
     return engressor
 
 
@@ -73,6 +77,9 @@ class Engressor(object):
         device (str or torch.device, optional): device. Defaults to "cpu". Choices = ["cpu", "gpu", "cuda"].
         check_device (bool, optional): whether to check the device. Defaults to True.
     """
+    # epoch of the parameters kept by validation; defined here so that models saved by earlier versions can be loaded
+    best_epoch = None
+
     def __init__(self, 
                  in_dim, out_dim, classification=False,
                  num_layer=2, hidden_dim=100, noise_dim=100, 
@@ -134,6 +141,9 @@ class Engressor(object):
               "\t standardization: {}\n".format(self.standardize) +
               "\t training mode: {}\n".format(self.model.training) +
               "\t device: {}\n".format(self.device))
+        if self.best_epoch is not None:
+            print("Validation:\n" +
+                  "\t parameters kept from epoch {}, with the lowest energy loss on the validation data\n".format(self.best_epoch))
         if self.tr_loss is not None:
             print("Training loss (original scale):\n" +
                   "\t energy-loss: {:.2f}, \n\tE(|Y-Yhat|): {:.2f}, \n\tE(|Yhat-Yhat'|): {:.2f}".format(
@@ -213,7 +223,8 @@ class Engressor(object):
             else:
                 return x, y
         
-    def train(self, x, y, num_epochs=None, batch_size=None, lr=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=None, verbose=True):
+    def train(self, x, y, num_epochs=None, batch_size=None, lr=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=None, verbose=True,
+              x_val=None, y_val=None):
         """Fit the model.
 
         Args:
@@ -226,7 +237,11 @@ class Engressor(object):
             print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
             standardize (bool, optional): whether to standardize the data. Defaults to True.
             verbose (bool, optional): whether to print losses and info. Defaults to True.
+            x_val (torch.Tensor, optional): validation data of predictors. Defaults to None.
+            y_val (torch.Tensor, optional): validation data of responses. With validation data, the energy loss on them is computed about every 50 iterations, at the end of an epoch, and after the last epoch, and the parameters with the lowest loss are kept. Defaults to None.
         """
+        if (x_val is None) != (y_val is None):
+            raise ValueError("Validation data need both `x_val` and `y_val`.")
         self.train_mode()
         if num_epochs is not None:
             self.num_epochs = num_epochs
@@ -241,6 +256,13 @@ class Engressor(object):
             
         x = vectorize(x)
         y = vectorize(y)
+        if x_val is not None:
+            x_val = vectorize(x_val)
+            y_val = vectorize(y_val)
+            if x_val.size(0) != y_val.size(0):
+                raise ValueError("The sample sizes of `x_val` and `y_val` do not match.")
+            if x_val.size(1) != x.size(1) or y_val.size(1) != y.size(1):
+                raise ValueError("The validation data must have as many columns as the training data.")
         if self.standardize:
             if verbose:
                 print("Data is standardized for training only; the printed training losses are on the standardized scale. \n" +
@@ -248,6 +270,11 @@ class Engressor(object):
             x, y = self._standardize_data_and_record_stats(x, y)
         x = x.to(self.device)
         y = y.to(self.device)
+        self.best_epoch = None
+        if x_val is not None:
+            x_val, y_val = self.standardize_data(x_val.to(self.device), y_val.to(self.device))
+            self._best_val_loss = float("inf")
+            self._best_state = None
         
         if batch_size >= x.size(0)//2:
             if verbose:
@@ -262,6 +289,8 @@ class Engressor(object):
                 if (epoch_idx == 0 or  (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                     print("[Epoch {} ({:.0f}%)] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
                         epoch_idx + 1, 100 * epoch_idx / self.num_epochs, loss.item(), loss1.item(), loss2.item()))
+                if x_val is not None:
+                    self._validate(x_val, y_val, epoch_idx, iters_per_epoch=1)
         else:
             # Batch normalization needs more than one observation in a batch, so a last batch of one is left out.
             train_loader = make_dataloader(x, y, batch_size=batch_size, shuffle=True, 
@@ -275,6 +304,15 @@ class Engressor(object):
                     if (epoch_idx == 0 or (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                         if (batch_idx + 1) % max(1, (len(train_loader) - 1) // print_times_per_epoch) == 0:
                             self.print_loss(epoch_idx, batch_idx)
+                if x_val is not None:
+                    self._validate(x_val, y_val, epoch_idx, iters_per_epoch=len(train_loader))
+
+        if x_val is not None:
+            if self.best_epoch is not None:
+                self.model.load_state_dict(self._best_state)
+                if verbose:
+                    print("\nThe parameters after epoch {} gave the lowest energy loss on the validation data and are kept.".format(self.best_epoch))
+            del self._best_val_loss, self._best_state
 
         # Evaluate performance on the training data (on the original scale)
         self.model.eval()
@@ -290,6 +328,29 @@ class Engressor(object):
             print("\nPrediction-loss E(|Y-Yhat|) and variance-loss E(|Yhat-Yhat'|) should ideally be equally large" +
                 "\n-- consider training for more epochs or adjusting hyperparameters if there is a mismatch ")
     
+    @torch.no_grad()
+    def _validation_loss(self, x_val, y_val):
+        """Energy loss on the validation data, on the scale of training, estimated with two samples for each data point.
+        The random number generators of the CPU and of a CUDA device are restored afterwards, so that validation does not change the training.
+        """
+        with keep_rng_state(self.device):
+            self.eval_mode()
+            y_samples = self.model.sample(x_val, sample_size=2, expand_dim=False)
+            self.train_mode()
+        return energy_loss(y_val, y_samples, beta=self.beta, verbose=False).item()
+
+    def _validate(self, x_val, y_val, epoch_idx, iters_per_epoch):
+        """At the end of an epoch in which the number of iterations reaches a multiple of 50, and at the end of the last epoch,
+        compute the energy loss on the validation data and keep a copy of the parameters if the loss is the lowest so far.
+        """
+        if (epoch_idx + 1) * iters_per_epoch // 50 == epoch_idx * iters_per_epoch // 50 and epoch_idx + 1 < self.num_epochs:
+            return
+        val_loss = self._validation_loss(x_val, y_val)
+        if val_loss < self._best_val_loss:
+            self._best_val_loss = val_loss
+            self._best_state = copy.deepcopy(self.model.state_dict())
+            self.best_epoch = epoch_idx + 1
+
     def zero_loss(self):
         self.tr_loss = 0
         self.tr_loss1 = 0
