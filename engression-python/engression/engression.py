@@ -98,9 +98,11 @@ class Engressor(object):
                 device = torch.device("cuda")
             else:
                 device = torch.device(device)
-        self.device = device
         if check_device:
-            check_for_gpu(self.device)
+            check_for_gpu(device)
+        if device.type == "cuda" and not torch.cuda.is_available():
+            device = torch.device("cpu")
+        self.device = device
         self.standardize = standardize
         self.x_mean = None
         self.x_std = None

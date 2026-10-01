@@ -58,6 +58,8 @@ def check_for_gpu(device):
             print("GPU is available, running on GPU.\n")
         else:
             print("GPU is NOT available, running instead on CPU.\n")
+    elif device.type == "mps":
+        print("Running on MPS.\n")
     else:
         if torch.cuda.is_available():
             print("Warning: You have a CUDA device, so you may consider using GPU for potential acceleration\n by setting device to 'cuda'.\n")

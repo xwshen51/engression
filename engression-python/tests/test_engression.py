@@ -5,6 +5,7 @@ from engression import engression
 from engression.data.loader import make_dataloader
 from engression.loss_func import energy_loss_two_sample
 from engression.models import StoNet
+from engression.utils import check_for_gpu
 
 
 def simulate(n=300, seed=0):
@@ -106,6 +107,17 @@ def test_constant_covariate():
     y_pred = engressor.predict(x[:7])
     torch.manual_seed(0)
     assert (engressor.predict(x_new) - y_pred).abs().max() < 10
+
+
+@pytest.mark.skipif(torch.cuda.is_available(), reason="needs a machine without CUDA")
+def test_cuda_not_available(capsys):
+    """Without CUDA, device="cuda" used to print that the CPU is used instead and then fail."""
+    x, y = simulate()
+    engressor = engression(x, y, num_epochs=2, device="cuda")
+    assert engressor.device.type == "cpu"
+    assert "GPU is NOT available, running instead on CPU." in capsys.readouterr().out
+    check_for_gpu(torch.device("mps"))
+    assert capsys.readouterr().out == "Running on MPS.\n\n"
 
 
 def test_eval_loss_verbose():
