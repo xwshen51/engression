@@ -302,8 +302,11 @@ class StoNetBase(nn.Module):
             test_loader = make_dataloader(x, batch_size=batch_size, shuffle=False)
             samples = []
             for (x_batch,) in test_loader:
-                samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim))
+                samples.append(self.sample_onebatch(x_batch, sample_size, expand_dim=True))
             samples = torch.cat(samples, dim=0)
+            if not expand_dim:
+                ## the layout of sample_onebatch: samples[data_size*(i-1):data_size*i,:] contains the i-th sample of all x
+                samples = samples.movedim(-1, 0).reshape(-1, *samples.shape[1:-1])
         else:
             samples = self.sample_onebatch(x, sample_size, expand_dim)
         return samples

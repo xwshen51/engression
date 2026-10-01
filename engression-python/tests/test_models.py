@@ -4,7 +4,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from engression.models import StoLayer, StoResBlock, StoNet, CondStoNet, Net, ResMLP
+from engression.models import StoLayer, StoResBlock, StoNetBase, StoNet, CondStoNet, Net, ResMLP
 
 
 def shared_parameters(model):
@@ -97,3 +97,30 @@ def test_sample_raises_errors():
             model.sample(torch.randn(7, 3).double(), sample_size=2)
     finally:
         signal.alarm(0)
+
+
+class OutOfMemoryNet(StoNetBase):
+    """Adds standard Gaussian noise to its input, and runs out of memory for inputs of more than `max_size` rows."""
+    def __init__(self, max_size):
+        super().__init__()
+        self.max_size = max_size
+
+    def forward(self, x):
+        if x.size(0) > self.max_size:
+            raise RuntimeError("CUDA out of memory (simulated)")
+        return x + torch.randn_like(x)
+
+
+def test_sample_after_running_out_of_memory():
+    """After running out of memory, `sample` draws for batches of x. With expand_dim=False, the draws used to come batch
+    by batch instead of in the layout of a single batch, in which rows data_size*(i-1) to data_size*i-1 hold the i-th
+    draw for all x, the layout that `energy_loss` and hence `eval_loss` rely on."""
+    x = torch.arange(6.).unsqueeze(1) * 10
+    model = OutOfMemoryNet(max_size=4)
+    torch.manual_seed(0)
+    samples = model.sample(x, sample_size=2, expand_dim=True, verbose=False)
+    torch.manual_seed(0)
+    samples_flat = model.sample(x, sample_size=2, expand_dim=False, verbose=False)
+    assert samples.shape == (6, 1, 2) and samples_flat.shape == (12, 1)
+    assert torch.equal(samples_flat, torch.cat([samples[:, :, 0], samples[:, :, 1]]))
+    assert torch.allclose(samples_flat, x.repeat(2, 1), atol=5)
