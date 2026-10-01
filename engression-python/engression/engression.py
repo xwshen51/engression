@@ -129,7 +129,7 @@ class Engressor(object):
               "\t noise dimensions: {}\n".format(self.noise_dim) +
               "\t residual blocks: {}\n".format(self.resblock) +
               "\t number of epochs: {}\n".format(self.num_epochs) +
-              "\t batch size: {}\n".format(self.batch_size) +
+              "\t batch size: {}\n".format(self.batch_size if self.batch_size is not None else "full batch") +
               "\t learning rate: {}\n".format(self.lr) +
               "\t standardization: {}\n".format(self.standardize) +
               "\t training mode: {}\n".format(self.model.training) +
@@ -252,7 +252,6 @@ class Engressor(object):
         if batch_size >= x.size(0)//2:
             if verbose:
                 print("Batch is larger than half of the sample size. Training based on full-batch gradient descent.")
-            self.batch_size = x.size(0)
             for epoch_idx in range(self.num_epochs):
                 self.model.zero_grad()
                 y_sample1 = self.model(x)

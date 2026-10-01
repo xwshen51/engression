@@ -128,6 +128,17 @@ def test_summary_before_training(capsys):
     assert "Engression model with" in out and "Training loss" not in out
 
 
+def test_train_again_on_more_data(capsys):
+    """A full-batch fit used to record the sample size as the batch size, so that training again on more data used
+    mini-batches of the first sample size."""
+    x, y = simulate()
+    engressor = engression(x[:100], y[:100], num_epochs=1, verbose=False)
+    engressor.train(x, y, num_epochs=1)
+    assert "full-batch gradient descent" in capsys.readouterr().out and engressor.batch_size is None
+    engressor.summary()
+    assert "batch size: full batch" in capsys.readouterr().out
+
+
 def test_eval_loss_verbose():
     """eval_loss(verbose=True) used to fail for the losses other than the energy loss."""
     x, y = simulate()
