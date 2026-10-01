@@ -225,7 +225,7 @@ class Engressor(object):
             else:
                 return x, y
         
-    def train(self, x, y, num_epochs=None, batch_size=None, lr=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=None, verbose=True,
+    def train(self, x, y, num_epochs=None, batch_size=None, lr=None, print_every_nepoch=100, print_times_per_epoch=1, standardize=None, verbose=None,
               x_val=None, y_val=None):
         """Fit the model.
 
@@ -238,12 +238,14 @@ class Engressor(object):
             print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
             print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
             standardize (bool, optional): whether to standardize the data. Defaults to True.
-            verbose (bool, optional): whether to print losses and info. Defaults to True.
+            verbose (bool, optional): whether to print losses and info. Defaults to None, referring to the verbose argument of the Engressor.
             x_val (torch.Tensor, optional): validation data of predictors. Defaults to None.
             y_val (torch.Tensor, optional): validation data of responses. With validation data, the energy loss on them is computed about every 50 iterations, at the end of an epoch, and after the last epoch, and the parameters with the lowest loss are kept. Defaults to None.
         """
         if (x_val is None) != (y_val is None):
             raise ValueError("Validation data need both `x_val` and `y_val`.")
+        if verbose is None:
+            verbose = self.verbose
         x = to_tensor(x)
         y = to_tensor(y)
         self.train_mode()

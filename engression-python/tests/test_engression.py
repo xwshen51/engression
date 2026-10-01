@@ -133,7 +133,7 @@ def test_train_again_on_more_data(capsys):
     mini-batches of the first sample size."""
     x, y = simulate()
     engressor = engression(x[:100], y[:100], num_epochs=1, verbose=False)
-    engressor.train(x, y, num_epochs=1)
+    engressor.train(x, y, num_epochs=1, verbose=True)
     assert "full-batch gradient descent" in capsys.readouterr().out and engressor.batch_size is None
     engressor.summary()
     assert "batch size: full batch" in capsys.readouterr().out
@@ -230,3 +230,15 @@ def test_numpy_and_other_numeric_types(tmp_path):
     plt.switch_backend("Agg")
     engressor.plot(x.numpy(), y[:, 0].numpy(), x_tr=x.numpy(), y_tr=y[:, 0].numpy(), save_dir=str(tmp_path / "plot.png"))
     assert (tmp_path / "plot.png").exists()
+
+
+def test_train_follows_verbose_of_engressor(capsys):
+    """`train` used to print losses even for an Engressor made with verbose=False."""
+    from engression.engression import Engressor
+    x, y = simulate()
+    Engressor(3, 2, verbose=False, check_device=False).train(x, y, num_epochs=2)
+    assert capsys.readouterr().out == ""
+    Engressor(3, 2, check_device=False).train(x, y, num_epochs=2, verbose=False)
+    assert capsys.readouterr().out == ""
+    Engressor(3, 2, check_device=False).train(x, y, num_epochs=2)
+    assert "Training loss" in capsys.readouterr().out
