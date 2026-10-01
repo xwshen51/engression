@@ -24,4 +24,12 @@ setup(
     long_description_content_type="text/markdown",
     packages=find_packages(),
     license="BSD 3-Clause License",
+    python_requires=">=3.9",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Science/Research",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    ],
 )
