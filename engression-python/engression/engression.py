@@ -23,7 +23,7 @@ def engression(x, y, classification=False,
         num_layer (int, optional): number of (linear) layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
-        out_act (str, optional): output activation function. Defaults to None.
+        out_act (str, optional): output activation function. It acts on the original scale of the response, which is therefore not standardized, as for classification. Defaults to None.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         resblock (bool, optional): whether to use residual blocks (skip connections). Defaults to False.
         beta (float, optional): power parameter in the energy loss.
@@ -62,7 +62,7 @@ class Engressor(object):
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to 100.
-        out_act (str, optional): output activation function. Defaults to None.
+        out_act (str, optional): output activation function. It acts on the original scale of the response, which is therefore not standardized, as for classification. Defaults to None.
         resblock (bool, optional): whether to use residual blocks (skip-connections). Defaults to False.
         add_bn (bool, optional): whether to add BN layer. Defaults to True.
         beta (float, optional): power parameter in the energy loss.
@@ -149,7 +149,8 @@ class Engressor(object):
         self.x_mean = torch.mean(x, dim=0)
         self.x_std = torch.std(x, dim=0)
         self.x_std[self.x_std == 0] += 1e-5
-        if not self.classification:
+        # An output activation acts on the original scale of the response, so that the response is not standardized.
+        if not (self.classification or self.out_act):
             self.y_mean = torch.mean(y, dim=0)
             self.y_std = torch.std(y, dim=0)
             self.y_std[self.y_std == 0] += 1e-5

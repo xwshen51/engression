@@ -81,6 +81,18 @@ def test_sample_size_one(tmp_path):
     assert (tmp_path / "samples.png").is_file()
 
 
+def test_output_activation():
+    """With an output activation, the response is not standardized, so that the activation acts on its original scale.
+    The response used to be standardized, so that with out_act="softplus" no sample fell below the mean response."""
+    torch.manual_seed(0)
+    x = torch.rand(500, 1) * 2
+    y = torch.distributions.Exponential(1 / (1 + x)).sample()
+    engressor = engression(x, y, out_act="softplus", num_epochs=50, lr=1e-2, verbose=False)
+    assert torch.equal(engressor.y_mean, torch.zeros(1)) and torch.equal(engressor.y_std, torch.ones(1))
+    y_samples = engressor.sample(x[:100], sample_size=10)
+    assert (y_samples >= 0).all() and (y_samples < y.mean()).float().mean() > 0.3
+
+
 def test_eval_loss_verbose():
     """eval_loss(verbose=True) used to fail for the losses other than the energy loss."""
     x, y = simulate()
