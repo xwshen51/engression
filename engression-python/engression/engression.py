@@ -298,7 +298,7 @@ class Engressor(object):
         y = encode_response(y, self.y_zero_one.to(y.device))
         for block in self.blocks:
             if block.name == "multilabel" and not (y[:, block.start:block.end].abs() == 1).all():
-                raise ValueError("The binary labels of the validation data must be coded as those of the training data, as 0/1 or as -1/+1.")
+                raise ValueError("The binary labels must be coded as those of the training data, as 0/1 or as -1/+1.")
         return y
 
     def decode_response(self, y):
@@ -548,12 +548,12 @@ class Engressor(object):
 
         Args:
             x (torch.Tensor): data of predictors.
-            y (torch.Tensor): data of responses.
+            y (torch.Tensor): data of responses, coded as the training data.
             loss_type (str, optional): loss type. Defaults to "l2". Choices: ["l2", "l1", "energy", "cor"].
             sample_size (int, optional): generated sample sizes for each x. Defaults to 2 for the energy loss and 100 otherwise.
             beta (float, optional): beta in energy score. Defaults to 1.
             verbose (bool, optional): whether to return also the two terms of the energy loss. Defaults to False.
-        
+
         Returns:
             float: evaluation loss, or for the energy loss with verbose=True, a tuple of the loss and its two terms.
         """
@@ -564,6 +564,8 @@ class Engressor(object):
         y = vectorize(to_tensor(y))
         x = x.to(self.device)
         y = y.to(self.device)
+        if self.is_gem:
+            self.encode_response(y, training=False)   # raises an error unless y is coded as the training data
         if loss_type == "l2":
             y_pred = self.predict(x, target="mean", sample_size=sample_size)
             loss = (y - y_pred).pow(2).mean()

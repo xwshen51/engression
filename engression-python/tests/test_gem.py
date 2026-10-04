@@ -255,3 +255,20 @@ def test_validation_coding():
     with pytest.raises(ValueError, match="all coded as 0/1 or all as -1/\\+1"):
         engression(x, y, data_type="multilabel", num_epochs=1, verbose=False, x_val=x_val, y_val=3 * y_val)
     engression(x, y.long(), data_type="multilabel", num_epochs=1, verbose=False, x_val=x_val, y_val=y_val.long())
+
+
+def test_eval_loss_coding():
+    """`eval_loss` checks that the response is coded as the training data. Labels coded as -1/+1 for a model trained on
+    0/1 labels would otherwise give a wrong loss without an error."""
+    x, y = simulate("multilabel")
+    engressor = engression(x, y, data_type="multilabel", num_epochs=2, verbose=False)
+    for loss_type in ["energy", "l2"]:
+        engressor.eval_loss(x, y, loss_type=loss_type)
+        with pytest.raises(ValueError, match="coded as those of the training data"):
+            engressor.eval_loss(x, 2 * y - 1, loss_type=loss_type)
+    with pytest.raises(ValueError, match="all coded as 0/1 or all as -1/\\+1"):
+        engressor.eval_loss(x, 3 * y)
+    x, y = simulate("multiclass")
+    engressor = engression(x, y, data_type="multiclass", num_epochs=2, verbose=False)
+    with pytest.raises(ValueError, match="indicator"):
+        engressor.eval_loss(x, y.argmax(dim=1, keepdim=True).float().repeat(1, 4))
