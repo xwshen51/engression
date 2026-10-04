@@ -1,5 +1,6 @@
 import os
 import copy
+import warnings
 import torch
 import matplotlib.pyplot as plt
 
@@ -26,7 +27,7 @@ def engression(x, y, classification=False,
     Args:
         x (torch.Tensor): training data of predictors. A numpy array or a tensor of another numeric type is converted to a float32 tensor, here and in the other functions.
         y (torch.Tensor): training data of responses. See `data_type` for the coding of responses that are not continuous.
-        classification (bool, optional): classification or not.
+        classification (bool, optional): classification or not. Obsolete: for a categorical response, use data_type="multiclass" instead.
         num_layer (int, optional): number of (linear) layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to None, referring to 100 for a continuous response and to the dimension of the response otherwise.
@@ -82,7 +83,7 @@ class Engressor(object):
     Args:
         in_dim (int): input dimension
         out_dim (int): output dimension
-        classification (bool, optional): classification or not.
+        classification (bool, optional): classification or not. Obsolete: for a categorical response, use data_type="multiclass" instead.
         num_layer (int, optional): number of layers. Defaults to 2.
         hidden_dim (int, optional): number of neurons per layer. Defaults to 100.
         noise_dim (int, optional): noise dimension. Defaults to None, referring to 100 for a continuous response and to the dimension of the response otherwise.
@@ -121,6 +122,9 @@ class Engressor(object):
         self.is_gem = any(block.name != "continuous" for block in self.blocks)
         if self.is_gem and (classification or out_act):
             raise ValueError("`classification` and `out_act` are not used with `data_type`: the data type sets the link from the output of the network to the response.")
+        if classification:
+            warnings.warn("`classification=True` is obsolete. For a categorical response, use `data_type=\"multiclass\"`, "
+                          "with the classes coded as one-hot vectors.", FutureWarning, stacklevel=2)
         if noise_dim is None:
             noise_dim = out_dim if self.is_gem else 100
         if add_bn is None:

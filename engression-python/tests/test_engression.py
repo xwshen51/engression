@@ -1,8 +1,10 @@
 """Tests of engression for continuous responses, which generalized engression must leave unchanged."""
+import warnings
+
 import pytest
 import torch
 
-from engression import engression
+from engression import engression, Engressor
 from engression.data.loader import make_dataloader
 from engression.loss_func import energy_loss_two_sample
 from engression.models import StoNet
@@ -63,12 +65,26 @@ def test_classification_sample():
     """`sample` used to fail for models fitted with classification=True."""
     x, _ = simulate()
     y = torch.nn.functional.one_hot(torch.randint(0, 4, (300,)), 4).float()
-    engressor = engression(x, y, classification=True, num_epochs=5, verbose=False)
+    with pytest.warns(FutureWarning, match="obsolete"):
+        engressor = engression(x, y, classification=True, num_epochs=5, verbose=False)
     for sample_size in [1, 4, 10]:
         y_samples = engressor.sample(x[:7], sample_size=sample_size)
         assert y_samples.shape == ((7, 4, sample_size) if sample_size > 1 else (7, 4))
         assert torch.allclose(y_samples.sum(dim=1), torch.ones(1))
     assert engressor.predict(x[:7]).shape == (7, 4)
+
+
+def test_classification_is_obsolete():
+    """classification=True gives a warning that it is obsolete, which points to data_type="multiclass"."""
+    x, _ = simulate()
+    y = torch.nn.functional.one_hot(torch.randint(0, 4, (300,)), 4).float()
+    with pytest.warns(FutureWarning, match='obsolete.*data_type="multiclass"'):
+        Engressor(3, 4, classification=True, check_device=False, verbose=False)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        engression(x, y, num_epochs=1, verbose=False)
+        engression(x, y, data_type="multiclass", num_epochs=1, verbose=False)
+    assert not any("obsolete" in str(w.message) for w in caught)
 
 
 def test_sample_size_one(tmp_path):
