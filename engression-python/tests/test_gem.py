@@ -166,6 +166,23 @@ def test_defaults():
     assert any(isinstance(module, torch.nn.BatchNorm1d) for module in engressor.model.modules())
 
 
+def test_default_learning_rate_and_epochs(monkeypatch):
+    """A GEM is trained with the learning rate 0.001 for 2000 epochs, a continuous response with 0.0001 for 500 epochs, as before."""
+    for data_type, lr, num_epochs in [("multilabel", 0.001, 2000), ({"continuous": 0, "ranking": 1}, 0.001, 2000),
+                                      (None, 0.0001, 500), ("continuous", 0.0001, 500)]:
+        engressor = Engressor(2, 4, data_type=data_type, check_device=False, verbose=False)
+        assert engressor.lr == lr and engressor.num_epochs == num_epochs
+        assert engressor.optimizer.param_groups[0]["lr"] == lr
+    engressor = Engressor(2, 4, data_type="multilabel", lr=0.01, num_epochs=7, check_device=False, verbose=False)
+    assert engressor.lr == 0.01 and engressor.num_epochs == 7 and engressor.optimizer.param_groups[0]["lr"] == 0.01
+    monkeypatch.setattr(Engressor, "train", lambda self, *args, **kwargs: None)
+    x, y = simulate("multilabel")
+    engressor = engression(x, y, data_type="multilabel", verbose=False)
+    assert engressor.lr == 0.001 and engressor.num_epochs == 2000
+    engressor = engression(x, y, verbose=False)
+    assert engressor.lr == 0.0001 and engressor.num_epochs == 500
+
+
 def test_ordinal_starts_from_middle_level():
     engressor = Engressor(in_dim=2, out_dim=3, data_type={"continuous": 0, "ordinal:5": 1}, check_device=False)
     engressor.model.eval()

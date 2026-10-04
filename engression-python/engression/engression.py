@@ -14,7 +14,7 @@ from .utils import *
 def engression(x, y, classification=False,
                num_layer=2, hidden_dim=100, noise_dim=None, out_act=None,
                add_bn=None, resblock=False, beta=1,
-               lr=0.0001, num_epochs=500, batch_size=None, 
+               lr=None, num_epochs=None, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
                device="cpu", standardize=True, verbose=True,
                x_val=None, y_val=None,
@@ -34,8 +34,8 @@ def engression(x, y, classification=False,
         add_bn (bool, optional): whether to add BN layer. Defaults to None, referring to True for a continuous response and to False otherwise.
         resblock (bool, optional): whether to use residual blocks (skip connections). Defaults to False.
         beta (float, optional): power parameter in the energy loss.
-        lr (float, optional): learning rate. Defaults to 0.0001.
-        num_epochs (int, optional): number of epochs. Defaults to 500.
+        lr (float, optional): learning rate. Defaults to None, referring to 0.0001 for a continuous response and to 0.001 otherwise.
+        num_epochs (int, optional): number of epochs. Defaults to None, referring to 500 for a continuous response and to 2000 otherwise.
         batch_size (int, optional): batch size. Defaults to None.
         print_every_nepoch (int, optional): print losses every print_every_nepoch number of epochs. Defaults to 100.
         print_times_per_epoch (int, optional): print losses for print_times_per_epoch times per epoch. Defaults to 1.
@@ -90,8 +90,8 @@ class Engressor(object):
         resblock (bool, optional): whether to use residual blocks (skip-connections). Defaults to False.
         add_bn (bool, optional): whether to add BN layer. Defaults to None, referring to True for a continuous response and to False otherwise.
         beta (float, optional): power parameter in the energy loss.
-        lr (float, optional): learning rate. Defaults to 0.0001.
-        num_epochs (int, optional): number of epochs. Defaults to 500.
+        lr (float, optional): learning rate. Defaults to None, referring to 0.0001 for a continuous response and to 0.001 otherwise.
+        num_epochs (int, optional): number of epochs. Defaults to None, referring to 500 for a continuous response and to 2000 otherwise.
         batch_size (int, optional): batch size. Defaults to None, referring to the full batch.
         standardize (bool, optional): whether to standardize data during training. Defaults to True.
         device (str or torch.device, optional): device. Defaults to "cpu". Choices = ["cpu", "gpu", "cuda"].
@@ -110,7 +110,7 @@ class Engressor(object):
                  in_dim, out_dim, classification=False,
                  num_layer=2, hidden_dim=100, noise_dim=None, 
                  out_act=False, resblock=False, add_bn=None, beta=1,
-                 lr=0.0001, num_epochs=500, batch_size=None, standardize=True, 
+                 lr=None, num_epochs=None, batch_size=None, standardize=True, 
                  device="cpu", check_device=True, verbose=True,
                  data_type=None, sigma_dim="scalar", sigma_min=0.2, control_variate=False):
         super().__init__()
@@ -125,6 +125,10 @@ class Engressor(object):
             noise_dim = out_dim if self.is_gem else 100
         if add_bn is None:
             add_bn = not self.is_gem
+        if lr is None:
+            lr = 0.001 if self.is_gem else 0.0001
+        if num_epochs is None:
+            num_epochs = 2000 if self.is_gem else 500
         self.sigma_dim = sigma_dim
         self.sigma_min = sigma_min
         self.control_variate = control_variate
