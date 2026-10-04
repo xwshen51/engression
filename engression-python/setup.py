@@ -17,7 +17,7 @@ setup(
     version=version,
     description='Engression Modelling',
     url='https://github.com/xwshen51/engression',
-    author='Xinwei Shen and Nicolai Meinshausen',
+    author='Xinwei Shen',
     author_email='xwshen@uw.edu',
     install_requires=install_requires,
     long_description=long_description,
