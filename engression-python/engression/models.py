@@ -4,7 +4,14 @@ from .data.loader import make_dataloader
 from .utils import vectorize
 
 
-class StoLayer(nn.Module):    
+def is_out_of_memory(error):
+    """Whether an error means that the device ran out of memory. On the CPU, the error says "can't allocate memory"
+    ("not enough memory" in older versions of torch) instead of "out of memory"."""
+    message = str(error)
+    return "out of memory" in message or "can't allocate memory" in message or "not enough memory" in message
+
+
+class StoLayer(nn.Module):
     """A stochastic layer.
 
     Args:
@@ -315,14 +322,14 @@ class StoNetBase(nn.Module):
         return samples
     
     def sample(self, x, sample_size=100, expand_dim=True, verbose=True):
-        """Sampling that adaptively adjusts the batch size according to the GPU memory."""
+        """Sampling that adaptively adjusts the batch size according to the memory of the device (GPU or CPU)."""
         batch_size = x.shape[0]
         while True:
             try:
                 samples = self.sample_batch(x, sample_size, expand_dim, batch_size)
                 break
             except RuntimeError as e:
-                if "out of memory" in str(e) and batch_size > 1:
+                if is_out_of_memory(e) and batch_size > 1:
                     batch_size = batch_size // 2
                     if verbose:
                         print("Out of memory; reduce the batch size to {}".format(batch_size))

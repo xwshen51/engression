@@ -100,23 +100,29 @@ def test_sample_raises_errors():
 
 
 class OutOfMemoryNet(StoNetBase):
-    """Adds standard Gaussian noise to its input, and runs out of memory for inputs of more than `max_size` rows."""
-    def __init__(self, max_size):
+    """Adds standard Gaussian noise to its input, and runs out of memory for inputs of more than `max_size` rows:
+    on a GPU (simulated) or on the CPU, by trying to allocate more memory than any computer has."""
+    def __init__(self, max_size, memory="gpu"):
         super().__init__()
         self.max_size = max_size
+        self.memory = memory
 
     def forward(self, x):
         if x.size(0) > self.max_size:
-            raise RuntimeError("CUDA out of memory (simulated)")
+            if self.memory == "gpu":
+                raise RuntimeError("CUDA out of memory (simulated)")
+            torch.empty(2 ** 50, dtype=torch.uint8)
         return x + torch.randn_like(x)
 
 
-def test_sample_after_running_out_of_memory():
+@pytest.mark.parametrize("memory", ["gpu", "cpu"])
+def test_sample_after_running_out_of_memory(memory):
     """After running out of memory, `sample` draws for batches of x. With expand_dim=False, the draws used to come batch
     by batch instead of in the layout of a single batch, in which rows data_size*(i-1) to data_size*i-1 hold the i-th
-    draw for all x, the layout that `energy_loss` and hence `eval_loss` rely on."""
+    draw for all x, the layout that `energy_loss` and hence `eval_loss` rely on. On the CPU, whose error message does not
+    say "out of memory", the error used to be raised."""
     x = torch.arange(6.).unsqueeze(1) * 10
-    model = OutOfMemoryNet(max_size=4)
+    model = OutOfMemoryNet(max_size=4, memory=memory)
     torch.manual_seed(0)
     samples = model.sample(x, sample_size=2, expand_dim=True, verbose=False)
     torch.manual_seed(0)
